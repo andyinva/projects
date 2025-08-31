@@ -1,0 +1,124 @@
+{
+  "window_width": 992,
+  "window_height": 982,
+  "window_heights": {
+    "search_window": 178,
+    "reading_window": 178,
+    "subject_verses": 178,
+    "verse_comments": 178
+  },
+  "static_heights": {
+    "search_settings": 120,
+    "message_window": 60
+  },
+  "search_settings": {
+    "case_sensitive": false,
+    "unique_verses": true,
+    "abbreviate_results": false,
+    "synonyms": false,
+    "fuzzy_match": false,
+    "word_stems": false,
+    "within_words": false,
+    "wildcards": false
+  },
+  "translations": [
+    {
+      "abbreviation": "KJV",
+      "enabled": true,
+      "sort_order": 1
+    },
+    {
+      "abbreviation": "ASV",
+      "enabled": true,
+      "sort_order": 2
+    },
+    {
+      "abbreviation": "DRB",
+      "enabled": true,
+      "sort_order": 3
+    },
+    {
+      "abbreviation": "DBT",
+      "enabled": true,
+      "sort_order": 4
+    },
+    {
+      "abbreviation": "ERV",
+      "enabled": true,
+      "sort_order": 5
+    },
+    {
+      "abbreviation": "WBT",
+      "enabled": true,
+      "sort_order": 6
+    },
+    {
+      "abbreviation": "WEB",
+      "enabled": true,
+      "sort_order": 7
+    },
+    {
+      "abbreviation": "YLT",
+      "enabled": true,
+      "sort_order": 8
+    },
+    {
+      "abbreviation": "AKJV",
+      "enabled": true,
+      "sort_order": 9
+    },
+    {
+      "abbreviation": "WNT",
+      "enabled": true,
+      "sort_order": 10
+    },
+    {
+      "abbreviation": "Bishops",
+      "enabled": true,
+      "sort_order": 11
+    },
+    {
+      "abbreviation": "Coverdale",
+      "enabled": true,
+      "sort_order": 12
+    },
+    {
+      "abbreviation": "Geneva",
+      "enabled": true,
+      "sort_order": 13
+    },
+    {
+      "abbreviation": "KJVStrongs",
+      "enabled": true,
+      "sort_order": 14
+    },
+    {
+      "abbreviation": "NET",
+      "enabled": true,
+      "sort_order": 15
+    },
+    {
+      "abbreviation": "Tyndale",
+      "enabled": true,
+      "sort_order": 16
+    },
+    {
+      "abbreviation": "BST",
+      "enabled": true,
+      "sort_order": 17
+    }
+  ],
+  "font_size": 11,
+  "search_history": [
+    "dark* AND Heaven*",
+    "2Sa 22:10",
+    "heave* AND dark*",
+    "Isaiah 8:19-23",
+    "Micah 3:7",
+    "Micha 3:7",
+    "1Sa 16:13-15",
+    "1Sa 16:13-14",
+    "1Sa 16:13,14",
+    "1Sa 16:13"
+  ]
+}

@@ -1,0 +1,4 @@
+*.db
+*.sqlite
+*/database/*.db
+*/json-translations/*.json

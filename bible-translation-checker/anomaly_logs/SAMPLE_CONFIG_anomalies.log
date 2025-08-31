@@ -1,0 +1,14 @@
+ANOMALY DETECTION REPORT FOR SAMPLE_CONFIG
+Source file: sample_config.json
+Analysis complete
+================================================================================
+
+
+ERRORS (2):
+----------------------------------------
+
+  STRUCTURE (2):
+    1. ROOT: Missing translation_info
+       Details: No translation_info found
+    2. ROOT: Missing books section
+

@@ -1,0 +1,124 @@
+ANOMALY DETECTION REPORT FOR MON
+Source file: MON.json
+Analysis complete
+================================================================================
+
+
+ERRORS (2):
+----------------------------------------
+
+  TEXT_CONTENT (2):
+    1. Rev:1:1: Contains invalid characters
+       Details: Invalid chars: ['\\'] in: \ul1 THE UNVEILING APOCALYPSE OF JESUS CHRIST\ul0 ...
+    2. Rev:1:3: Contains invalid characters
+       Details: Invalid chars: ['\\'] in: Blessed is he who reads, and they who hear the wor...
+
+
+WARNINGS (47):
+----------------------------------------
+
+  STRUCTURE (1):
+    1. books: Missing expected books
+       Details: Missing: ['1Ch', '1Ki', '1Sa', '2Ch', '2Ki', '2Sa', 'Amo', 'Dan', 'Deu', 'Ecc', 'Est', 'Exo', 'Eze', 'Ezr', 'Gen', 'Hab', 'Hag', 'Hos', 'Isa', 'Jdg', 'Jer', 'Job', 'Joe', 'Jon', 'Jos', 'Lam', 'Lev', 'Mal', 'Mic', 'Nah', 'Neh', 'Num', 'Oba', 'Pro', 'Psa', 'Rut', 'Son', 'Zec', 'Zep']
+
+
+  TEXT_CONTENT (16):
+    1. Mar:7:37: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    2. Mar:11:26: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    3. Luk:21:29: Duplicate verse content
+       Details: Same as Luk:15:3: And he told them a parable....
+    4. Joh:13:38: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    5. Joh:17:16: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    6. 1Th:2:20: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    7. Heb:3:19: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    8. Rev:3:6: Duplicate verse content
+       Details: Same as Rev:2:29: Let him who has an ear, listen to what the Spirit ...
+    9. Rev:22:5: Duplicate verse content
+       Details: Same as Mat:7:29: missing fehlt/missing...
+    10. Joh:13:1: Contains numeric characters
+       Details: Found numbers in: Now just before the feast of the Passover, Jesus, ...
+    11. 1Co:15:1: Contains numeric characters
+       Details: Found numbers in: Now I am calling to your remembrance, brothers, th...
+    12. 2Co:12:1: Contains numeric characters
+       Details: Found numbers in: I am forced to boast, though it is unprofitable, b...
+    13. 2Ti:4:1: Contains numeric characters
+       Details: Found numbers in: I adjure you in the presence of God and of Christ ...
+    14. Rev:1:1: Contains numeric characters
+       Details: Found numbers in: \ul1 THE UNVEILING APOCALYPSE OF JESUS CHRIST\ul0 ...
+    15. Rev:1:3: Contains numeric characters
+       Details: Found numbers in: Blessed is he who reads, and they who hear the wor...
+    16. Rev:13:18: Contains numeric characters
+       Details: Found numbers in: Here is wisdom. Let him who has understanding coun...
+
+
+  SEQUENCE (14):
+    1. Mat:20: Missing verses
+       Details: Missing: [23]
+    2. Mat:21: Missing verses
+       Details: Missing: [34]
+    3. Mat:24: Missing verses
+       Details: Missing: [39]
+    4. Mar:4: Missing verses
+       Details: Missing: [26]
+    5. Mar:7: Missing verses
+       Details: Missing: [16]
+    6. Mar:9: Missing verses
+       Details: Missing: [44, 46]
+    7. Mar:15: Missing verses
+       Details: Missing: [24, 28]
+    8. Joh:5: Missing verses
+       Details: Missing: [4]
+    9. Joh:16: Missing verses
+       Details: Missing: [10, 30]
+    10. Joh:17: Missing verses
+       Details: Missing: [11, 12, 13, 14, 15, 17]
+    11. 1Co:15: Missing verses
+       Details: Missing: [47]
+    12. 2Co:12: Missing verses
+       Details: Missing: [18]
+    13. 2Ti:4: Missing verses
+       Details: Missing: [11]
+    14. Heb:9: Missing verses
+       Details: Missing: [26]
+
+
+  ENCODING (16):
+    1. Luk:6:5: Unusual capitalization pattern
+       Details: 10/13 words are all caps
+    2. Luk:23:38: Unusual capitalization pattern
+       Details: 7/15 words are all caps
+    3. Joh:12:32: Unusual capitalization pattern
+       Details: 15/16 words are all caps
+    4. Joh:19:19: Unusual capitalization pattern
+       Details: 7/23 words are all caps
+    5. Rom:1:16: Unusual capitalization pattern
+       Details: 25/26 words are all caps
+    6. Rom:1:17: Unusual capitalization pattern
+       Details: 19/20 words are all caps
+    7. Rom:6:23: Unusual capitalization pattern
+       Details: 22/22 words are all caps
+    8. 2Co:9:15: Unusual capitalization pattern
+       Details: 8/8 words are all caps
+    9. 2Ti:2:19: Unusual capitalization pattern
+       Details: 19/31 words are all caps
+    10. Heb:10:31: Unusual capitalization pattern
+       Details: 13/14 words are all caps
+    11. Heb:12:29: Unusual capitalization pattern
+       Details: 7/8 words are all caps
+    12. 1Jo:3:11: Unusual capitalization pattern
+       Details: 6/19 words are all caps
+    13. 1Jo:4:21: Unusual capitalization pattern
+       Details: 10/17 words are all caps
+    14. Rev:11:15: Unusual capitalization pattern
+       Details: 23/40 words are all caps
+    15. Rev:17:5: Unusual capitalization pattern
+       Details: 13/22 words are all caps
+    16. Rev:19:16: Unusual capitalization pattern
+       Details: 7/20 words are all caps
+

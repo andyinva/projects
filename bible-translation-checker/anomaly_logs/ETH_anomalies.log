@@ -1,0 +1,106 @@
+ANOMALY DETECTION REPORT FOR ETH
+Source file: ETH.json
+Analysis complete
+================================================================================
+
+
+ERRORS (15):
+----------------------------------------
+
+  TEXT_CONTENT (15):
+    1. Mat:12:41: Contains invalid characters
+       Details: Invalid chars: ['ë'] in: The men of Ninevoë. shall rise up in the judgment ...
+    2. Mat:14:34: Contains invalid characters
+       Details: Invalid chars: ['é'] in: And they rowed, and came to the land of Genésar;...
+    3. Mat:18:9: Contains invalid characters
+       Details: Invalid chars: ['â'] in: And if thine eye be a cause of offence to thee, di...
+    4. Mat:23:7: Contains invalid characters
+       Details: Invalid chars: ['â'] in: and the shaloma in public places, and to be called...
+    5. Mat:23:8: Contains invalid characters
+       Details: Invalid chars: ['â'] in: But be you not called Râbi: for One is your Master...
+    6. Mat:23:9: Contains invalid characters
+       Details: Invalid chars: ['â'] in: And call no man Abâ to you upon earth: for One is ...
+    7. Mat:24:37: Contains invalid characters
+       Details: Invalid chars: ['û'] in: But as the days of Nûch, so shall be the coming of...
+    8. Mat:24:38: Contains invalid characters
+       Details: Invalid chars: ['û'] in: For as before the deluge they were eating and drin...
+    9. Mar:3:17: Contains invalid characters
+       Details: Invalid chars: ['â'] in: and upon Jacub bar Zabdai, and Juchanon the brothe...
+    10. Luk:16:20: Contains invalid characters
+       Details: Invalid chars: ['ó'] in: And there was a certain poor man, whose name was L...
+    11. Luk:16:23: Contains invalid characters
+       Details: Invalid chars: ['ó'] in: And, tormented in shiul, he lifted up his eyes afa...
+    12. Luk:16:24: Contains invalid characters
+       Details: Invalid chars: ['ó'] in: And he cried with a high voice, and said, My fathe...
+    13. Luk:16:25: Contains invalid characters
+       Details: Invalid chars: ['ó'] in: Abraham said to him, My son, remember that thou di...
+    14. Joh:14:9: Contains invalid characters
+       Details: Invalid chars: ['é'] in: Jeshu saith to him, All this time have I been with...
+    15. 1Co:1:11: Contains invalid characters
+       Details: Invalid chars: ['ë'] in: For they of the house of Kloë have sent to me conc...
+
+
+WARNINGS (25):
+----------------------------------------
+
+  STRUCTURE (1):
+    1. books: Missing expected books
+       Details: Missing: ['1Ch', '1Ki', '1Sa', '2Ch', '2Ki', '2Sa', 'Amo', 'Dan', 'Deu', 'Ecc', 'Est', 'Exo', 'Eze', 'Ezr', 'Gen', 'Hab', 'Hag', 'Hos', 'Isa', 'Jdg', 'Jer', 'Job', 'Joe', 'Jon', 'Jos', 'Lam', 'Lev', 'Mal', 'Mic', 'Nah', 'Neh', 'Num', 'Oba', 'Pro', 'Psa', 'Rut', 'Son', 'Zec', 'Zep']
+
+
+  TEXT_CONTENT (13):
+    1. Mar:7:16: Duplicate verse content
+       Details: Same as Mat:13:9: He who hath ears to hear, let him hear....
+    2. Mar:9:46: Duplicate verse content
+       Details: Same as Mar:9:44: where their worm dieth not, and their fire is not ...
+    3. Mar:9:48: Duplicate verse content
+       Details: Same as Mar:9:44: where their worm dieth not, and their fire is not ...
+    4. Luk:21:33: Duplicate verse content
+       Details: Same as Mar:13:31: Heaven and earth shall pass away, but my words sha...
+    5. Phi:1:2: Duplicate verse content
+       Details: Same as 1Co:1:3: Grace be with you and peace from Aloha our Father,...
+    6. Phm:1:25: Duplicate verse content
+       Details: Same as Gal:6:18: The grace of our Lord Jeshu Meshiha be with your s...
+    7. Rev:3:6: Duplicate verse content
+       Details: Same as Rev:2:29: He who hath ears, let him hear what the Spirit sai...
+    8. Rev:3:13: Duplicate verse content
+       Details: Same as Rev:2:29: He who hath ears, let him hear what the Spirit sai...
+    9. Rev:3:22: Duplicate verse content
+       Details: Same as Rev:2:29: He who hath ears, let him hear what the Spirit sai...
+    10. Mat:16:2: Contains numeric characters
+       Details: Found numbers in: 3But he answered and said to them, When it is even...
+    11. Act:1:11: Contains numeric characters
+       Details: Found numbers in: and they said to them, Men, Galiloyee, why stand y...
+    12. Phm:1:2: Contains numeric characters
+       Details: Found numbers in: and to our beloved Aphia, and to Arkipos our fello...
+    13. 1Pe:3:21: Contains numeric characters
+       Details: Found numbers in: After which very type also you are saved in baptis...
+
+
+  SEQUENCE (6):
+    1. Joh:8: Missing verses
+       Details: Missing: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    2. Act:8: Missing verses
+       Details: Missing: [37]
+    3. Act:15: Missing verses
+       Details: Missing: [34]
+    4. Act:28: Missing verses
+       Details: Missing: [29]
+    5. Rom:7: Missing verses
+       Details: Missing: [24]
+    6. Rev:20: Missing verses
+       Details: Missing: [9]
+
+
+  ENCODING (5):
+    1. Rom:16:27: Unusual capitalization pattern
+       Details: 11/17 words are all caps
+    2. 2Co:13:14: Unusual capitalization pattern
+       Details: 25/25 words are all caps
+    3. Heb:10:18: Unusual capitalization pattern
+       Details: 15/15 words are all caps
+    4. Rev:11:3: Unusual capitalization pattern
+       Details: 7/22 words are all caps
+    5. Rev:22:17: Unusual capitalization pattern
+       Details: 32/32 words are all caps
+

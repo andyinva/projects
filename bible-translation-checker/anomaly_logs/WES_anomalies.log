@@ -1,0 +1,61 @@
+ANOMALY DETECTION REPORT FOR WES
+Source file: WES.json
+Analysis complete
+================================================================================
+
+
+ERRORS (3):
+----------------------------------------
+
+  TEXT_CONTENT (3):
+    1. Mar:13:19: Contains invalid characters
+       Details: Invalid chars: ['`'] in: For in those days shall be affliction, such as was...
+    2. Luk:9:24: Contains invalid characters
+       Details: Invalid chars: ['|'] in: For who|oever will save his life shall gose it; bu...
+    3. Joh:8:6: Contains invalid characters
+       Details: Invalid chars: ['`'] in: What therefore sayest t`ou? This they spoke tempti...
+
+
+WARNINGS (16):
+----------------------------------------
+
+  STRUCTURE (1):
+    1. books: Missing expected books
+       Details: Missing: ['1Ch', '1Ki', '1Sa', '2Ch', '2Ki', '2Sa', 'Amo', 'Dan', 'Deu', 'Ecc', 'Est', 'Exo', 'Eze', 'Ezr', 'Gen', 'Hab', 'Hag', 'Hos', 'Isa', 'Jdg', 'Jer', 'Job', 'Joe', 'Jon', 'Jos', 'Lam', 'Lev', 'Mal', 'Mic', 'Nah', 'Neh', 'Num', 'Oba', 'Pro', 'Psa', 'Rut', 'Son', 'Zec', 'Zep']
+
+
+  TEXT_CONTENT (11):
+    1. Mar:7:7: Duplicate verse content
+       Details: Same as Mat:15:9: But in vain do they worship me, teaching for doctr...
+    2. Mar:9:48: Duplicate verse content
+       Details: Same as Mar:9:44: Where their worm dieth not, and the fire is not qu...
+    3. Mar:13:17: Duplicate verse content
+       Details: Same as Mat:24:19: But wo to them that are with child, and to them th...
+    4. Mar:14:28: Duplicate verse content
+       Details: Same as Mat:26:32: But after I am risen, I will go before you into Ga...
+    5. Luk:12:34: Duplicate verse content
+       Details: Same as Mat:6:21: For where your treasure is, there will your heart ...
+    6. Luk:13:5: Duplicate verse content
+       Details: Same as Luk:13:3: I tell you, Nay; but except ye repent, ye shall al...
+    7. Luk:21:33: Duplicate verse content
+       Details: Same as Mar:13:31: Heaven and earth shall pass away, but my words sha...
+    8. Phm:1:3: Duplicate verse content
+       Details: Same as 1Co:1:3: Grace be unto you, and peace from God our Father, ...
+    9. Rev:3:6: Duplicate verse content
+       Details: Same as Rev:2:29: He that hath an ear, let him hear what the Spirit ...
+    10. Rev:3:13: Duplicate verse content
+       Details: Same as Rev:2:29: He that hath an ear, let him hear what the spirit ...
+    11. Rev:3:22: Duplicate verse content
+       Details: Same as Rev:2:29: He that hath an ear, let him hear what the Spirit ...
+
+
+  ENCODING (4):
+    1. Mat:27:37: Unusual capitalization pattern
+       Details: 8/8 words are all caps
+    2. Mar:15:26: Unusual capitalization pattern
+       Details: 5/5 words are all caps
+    3. Luk:23:38: Unusual capitalization pattern
+       Details: 7/22 words are all caps
+    4. Joh:19:19: Unusual capitalization pattern
+       Details: 8/24 words are all caps
+

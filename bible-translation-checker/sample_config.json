@@ -1,0 +1,10 @@
+{
+  "check_text_content": true,
+  "check_sequences": true,
+  "check_structure": true,
+  "check_encoding": true,
+  "min_verse_length": 3,
+  "max_verse_length": 500,
+  "allowed_chars_pattern": "^[a-zA-Z0-9\\s\\.,;:!?\\'\"()\\[\\]\\/\\-\u2013\u2014\"\"''\u2026]*$",
+  "skip_books": []
+}

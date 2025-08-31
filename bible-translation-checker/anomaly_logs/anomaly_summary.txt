@@ -1,0 +1,73 @@
+BIBLE JSON ANOMALY DETECTION SUMMARY REPORT
+============================================================
+
+Files processed: 39
+Total anomalies found: 105070
+
+GLOBAL STATISTICS BY SEVERITY:
+------------------------------
+   ERROR:  73490
+ WARNING:  31580
+    INFO:      0
+
+GLOBAL STATISTICS BY CATEGORY:
+------------------------------
+TEXT_CONTENT:  91380
+    SEQUENCE:    121
+   STRUCTURE:    263
+    ENCODING:  13306
+
+FILE-BY-FILE SUMMARY:
+------------------------------
+ACV:   6 errors, 377 warnings (ACV.json)
+ASV: 1778 errors, 545 warnings (ASV.json)
+BBE: 1389 errors, 1732 warnings (BBE.json)
+BIB: 4524 errors, 174 warnings (BIB.json)
+BOM: 145 errors, 439 warnings (BOM.json)
+DAR: 950 errors, 469 warnings (DAR.json)
+DIA: 669 errors, 681 warnings (DIA.json)
+DOU:   5 errors, 392 warnings (DOU.json)
+EMT:   1 errors,  26 warnings (EMT.json)
+ETH:  15 errors,  25 warnings (ETH.json)
+ISV: 2718 errors,  97 warnings (ISV.json)
+JPS:   0 errors, 393 warnings (JPS.json)
+JUB: 230 errors, 229 warnings (JUB.json)
+KJ2: 604 errors, 270 warnings (KJ2.json)
+KJV:   0 errors, 278 warnings (KJV.json)
+LEB: 3166 errors,  50 warnings (LEB.json)
+LEE: 5726 errors, 7903 warnings (LEE.json)
+LON: 261 errors,  26 warnings (LON.json)
+LXX: 1266 errors, 926 warnings (LXX.json)
+MKJ:   1 errors, 241 warnings (MKJ.json)
+MON:   2 errors,  47 warnings (MON.json)
+NHE:   0 errors, 338 warnings (NHE.json)
+NSB: 15794 errors, 4919 warnings (NSB.json)
+RNT: 282 errors, 342 warnings (RNT.json)
+ROT:  39 errors, 239 warnings (ROT.json)
+RSV: 1205 errors, 576 warnings (RSV.json)
+RWE: 1783 errors, 275 warnings (RWE.json)
+RYL:   7 errors,  16 warnings (RYL.json)
+SAMPLE_CONFIG:   2 errors,   0 warnings (sample_config.json)
+TCE: 2640 errors, 671 warnings (TCE.json)
+UKJ:   0 errors, 280 warnings (UKJ.json)
+UNK: 4334 errors, 3424 warnings (UNK.json)
+UPD: 4216 errors, 737 warnings (UPD.json)
+WBS: 1436 errors, 1673 warnings (WBS.json)
+WEB: 5199 errors, 512 warnings (WEB.json)
+WES:   3 errors,  16 warnings (WES.json)
+WMT: 2624 errors,  69 warnings (WMT.json)
+XXX: 1606 errors, 1920 warnings (XXX.json)
+YLT: 8864 errors, 253 warnings (YLT.json)
+
+TOP ANOMALY TYPES:
+--------------------
+73128x ERROR_TEXT_CONTENT_Contains invalid characters
+13047x WARNING_ENCODING_Contains unusual unicode characters
+8826x WARNING_TEXT_CONTENT_Contains numeric characters
+7558x WARNING_TEXT_CONTENT_Duplicate verse content
+259x WARNING_ENCODING_Unusual capitalization pattern
+245x ERROR_STRUCTURE_Empty verse
+245x WARNING_TEXT_CONTENT_Verse too short (0 chars)
+121x WARNING_SEQUENCE_Missing verses
+115x ERROR_TEXT_CONTENT_Contains HTML/XML tags or entities
+ 67x WARNING_TEXT_CONTENT_Verse too short (1 chars)
