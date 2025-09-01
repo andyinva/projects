@@ -1,5 +1,6 @@
 import sqlite3
 import re
+import os
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 
@@ -24,14 +25,39 @@ class Translation:
 class BibleSearch:
     """Handles all Bible search operations with wildcard and reference search capabilities."""
     
-    def __init__(self, database_path: str = "bibles.db"):
-        self.database_path = database_path
+    def __init__(self, database_path: str = None):
+        self.database_path = database_path or self._find_database()
         self.book_abbreviations = {}
         self.reverse_book_abbreviations = {}
         self.book_order = {}  # Maps book name to order index
         self.translations = []
         self.load_books()
         self.load_translations()
+    
+    def _find_database(self, filename: str = "bibles.db") -> str:
+        """Find database file, searching current directory first, then subdirectories."""
+        # Check current directory first
+        if os.path.exists(filename):
+            return filename
+        
+        # Search in common subdirectories
+        common_dirs = ['database', 'db', 'data', 'databases']
+        for dir_name in common_dirs:
+            db_path = os.path.join(dir_name, filename)
+            if os.path.exists(db_path):
+                return db_path
+        
+        # Search recursively in all subdirectories (up to 2 levels deep)
+        current_dir = os.getcwd()
+        for root, dirs, files in os.walk(current_dir):
+            # Limit search depth to avoid performance issues
+            level = root.replace(current_dir, '').count(os.sep)
+            if level < 3:  # Allow up to 2 subdirectory levels
+                if filename in files:
+                    return os.path.join(root, filename)
+        
+        # If not found, return default name (will cause error later if file doesn't exist)
+        return filename
     
     def load_books(self):
         """Load book names and abbreviations from database."""
