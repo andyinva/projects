@@ -220,22 +220,44 @@ class BibleSearch:
             # Remove quotes from exact phrases
             if part.startswith('"') and part.endswith('"'):
                 search_term = part[1:-1]
-                like_pattern = f"%{search_term}%"
+                # For quoted terms, use word boundary matching
+                # We'll use multiple LIKE conditions to ensure word boundaries
+                quoted_term = True
             else:
+                quoted_term = False
                 # Apply wildcard conversion
                 search_term = self.convert_wildcard_to_sql(part)
+            
+            if quoted_term:
+                # For quoted terms, we'll do a broader search and filter for exact matches in Python
+                # This is simpler and more reliable than complex SQL word boundary logic
                 like_pattern = f"%{search_term}%"
-            
-            if case_sensitive:
-                condition = "text LIKE ?"
+                
+                if case_sensitive:
+                    condition = "text LIKE ?"
+                else:
+                    condition = "LOWER(text) LIKE LOWER(?)"
+                
+                if not_search:
+                    condition = f"NOT ({condition})"
+                
+                sql_conditions.append(condition)
+                search_terms.append(like_pattern)
+                # Note: We'll filter for exact word matches in the results processing
             else:
-                condition = "LOWER(text) LIKE LOWER(?)"
-            
-            if not_search:
-                condition = f"NOT ({condition})"
-            
-            sql_conditions.append(condition)
-            search_terms.append(like_pattern)
+                # Regular wildcard search
+                like_pattern = f"%{search_term}%"
+                
+                if case_sensitive:
+                    condition = "text LIKE ?"
+                else:
+                    condition = "LOWER(text) LIKE LOWER(?)"
+                
+                if not_search:
+                    condition = f"NOT ({condition})"
+                
+                sql_conditions.append(condition)
+                search_terms.append(like_pattern)
         
         # Combine conditions with operators
         if not operators:
@@ -268,8 +290,8 @@ class BibleSearch:
             if term.startswith('"') and term.endswith('"'):
                 phrase = term[1:-1]  # Remove quotes
                 if phrase:
-                    # Find exact phrase matches
-                    pattern = re.escape(phrase)
+                    # Find exact phrase matches with word boundaries for exact word matching
+                    pattern = r'\b' + re.escape(phrase) + r'\b'
                     for match in re.finditer(pattern, text, flags=re.IGNORECASE):
                         matches_to_highlight.append((match.start(), match.end(), match.group(0)))
             else:
@@ -342,8 +364,18 @@ class BibleSearch:
                             else:
                                 # For longer terms, find words containing the search term
                                 containing_pattern = r'\b\w*' + re.escape(clean_term) + r'\w*\b'
-                                for match in re.finditer(containing_pattern, text, flags=re.IGNORECASE):
-                                    matches_to_highlight.append((match.start(), match.end(), match.group(0)))
+                                for word_match in re.finditer(containing_pattern, text, flags=re.IGNORECASE):
+                                    # Find the exact position of the search term within this word
+                                    word_text = word_match.group(0)
+                                    word_start = word_match.start()
+                                    
+                                    # Find where the search term appears within this word
+                                    term_pattern = re.escape(clean_term)
+                                    for term_match in re.finditer(term_pattern, word_text, flags=re.IGNORECASE):
+                                        # Calculate the absolute position in the original text
+                                        term_start = word_start + term_match.start()
+                                        term_end = word_start + term_match.end()
+                                        matches_to_highlight.append((term_start, term_end, term_match.group(0)))
         
         # Sort matches by position (reverse order for easier processing)
         matches_to_highlight.sort(key=lambda x: x[0], reverse=True)
@@ -477,13 +509,13 @@ class BibleSearch:
                     result.text = self.abbreviate_text(result.text)
                     result.highlighted_text = self.abbreviate_text(result.highlighted_text)
             
-            # Sort by translation order, then by biblical book order
+            # Sort by biblical book order, then by translation order
             translation_order = {t.abbreviation: t.sort_order for t in self.translations}
             results.sort(key=lambda x: (
-                translation_order.get(x.translation, 999),  # Translation order first
-                self.book_order.get(x.book, 999),           # Biblical book order second
-                x.chapter,                                   # Chapter order third
-                x.verse                                      # Verse order fourth
+                self.book_order.get(x.book, 999),           # Biblical book order first
+                x.chapter,                                   # Chapter order second
+                x.verse,                                     # Verse order third
+                translation_order.get(x.translation, 999)   # Translation order fourth
             ))
             
         except Exception as e:
@@ -570,23 +602,48 @@ class BibleSearch:
                 rows = cursor.fetchall()
                 
                 for row in rows:
-                    highlighted_text = self.highlight_search_terms(row[3], query)
-                    
-                    result = SearchResult(
-                        translation=translation.abbreviation,
-                        book=row[0],
-                        chapter=row[1],
-                        verse=row[2],
-                        text=row[3],
-                        highlighted_text=highlighted_text
-                    )
-                    results.append(result)
+                    # Filter results to ensure quoted terms are exact word matches
+                    if self._contains_exact_quoted_terms(row[3], query, case_sensitive):
+                        highlighted_text = self.highlight_search_terms(row[3], query)
+                        
+                        result = SearchResult(
+                            translation=translation.abbreviation,
+                            book=row[0],
+                            chapter=row[1],
+                            verse=row[2],
+                            text=row[3],
+                            highlighted_text=highlighted_text
+                        )
+                        results.append(result)
             
             except sqlite3.Error as e:
                 print(f"Error searching words for {translation.abbreviation}: {e}")
                 continue
         
         return results
+    
+    def _contains_exact_quoted_terms(self, text: str, query: str, case_sensitive: bool) -> bool:
+        """Check if text contains all quoted terms as exact word matches."""
+        # Extract quoted terms from query
+        quoted_terms = re.findall(r'"([^"]*)"', query)
+        
+        if not quoted_terms:
+            # No quoted terms, so no filtering needed
+            return True
+        
+        # Check each quoted term for exact word match
+        for term in quoted_terms:
+            if not term.strip():
+                continue
+            
+            # Create word boundary pattern
+            pattern = r'\b' + re.escape(term) + r'\b'
+            flags = 0 if case_sensitive else re.IGNORECASE
+            
+            if not re.search(pattern, text, flags):
+                return False
+        
+        return True
     
     def _filter_unique_verses(self, results: List[SearchResult]) -> List[SearchResult]:
         """Filter to show only unique verses (highest priority translation)."""
@@ -609,30 +666,44 @@ class BibleSearch:
         return list(unique_results.values())
     
     def get_continuous_reading(self, translation: str, book: str, chapter: int, 
-                             start_verse: int, num_verses: int = 10) -> List[SearchResult]:
-        """Get continuous verses for reading window."""
+                             start_verse: int, num_verses: int = None) -> List[SearchResult]:
+        """Get continuous verses for reading window. If num_verses is None, loads entire chapter."""
         results = []
         
         try:
             conn = sqlite3.connect(self.database_path)
             cursor = conn.cursor()
             
-            # Use normalized database structure
-            sql = """
-            SELECT b.abbreviation, v.chapter, v.verse_number, vt.text 
-            FROM books b
-            JOIN verses v ON b.id = v.book_id
-            JOIN verse_texts vt ON v.id = vt.verse_id
-            JOIN translations t ON vt.translation_id = t.id
-            WHERE t.abbreviation = ?
-            AND b.abbreviation = ?
-            AND v.chapter = ? 
-            AND v.verse_number >= ?
-            ORDER BY v.verse_number
-            LIMIT ?
-            """
-            
-            cursor.execute(sql, (translation, book, chapter, start_verse, num_verses))
+            if num_verses is None:
+                # Load entire chapter
+                sql = """
+                SELECT b.abbreviation, v.chapter, v.verse_number, vt.text 
+                FROM books b
+                JOIN verses v ON b.id = v.book_id
+                JOIN verse_texts vt ON v.id = vt.verse_id
+                JOIN translations t ON vt.translation_id = t.id
+                WHERE t.abbreviation = ?
+                AND b.abbreviation = ?
+                AND v.chapter = ?
+                ORDER BY v.verse_number
+                """
+                cursor.execute(sql, (translation, book, chapter))
+            else:
+                # Load limited verses (existing behavior)
+                sql = """
+                SELECT b.abbreviation, v.chapter, v.verse_number, vt.text 
+                FROM books b
+                JOIN verses v ON b.id = v.book_id
+                JOIN verse_texts vt ON v.id = vt.verse_id
+                JOIN translations t ON vt.translation_id = t.id
+                WHERE t.abbreviation = ?
+                AND b.abbreviation = ?
+                AND v.chapter = ? 
+                AND v.verse_number >= ?
+                ORDER BY v.verse_number
+                LIMIT ?
+                """
+                cursor.execute(sql, (translation, book, chapter, start_verse, num_verses))
             rows = cursor.fetchall()
             
             for row in rows:

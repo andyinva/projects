@@ -178,6 +178,23 @@ class ResizableFrame(ttk.Frame):
             self.configure(height=safe_height)
             self.parent.update()
 
+class StaticFrame(ttk.Frame):
+    """A frame similar to ResizableFrame but without the drag bar - for windows 3, 4, and 5."""
+    
+    def __init__(self, parent, title: str, sync_callback=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.title = title
+        self.parent = parent
+        self.sync_callback = sync_callback
+        
+        # Create title label
+        self.title_label = ttk.Label(self, text=title, font=('Arial', 9, 'bold'))
+        self.title_label.pack(anchor='w', padx=5, pady=2)
+        
+        # Create content frame - no resize handle, so it takes all available space
+        self.content_frame = ttk.Frame(self, relief='sunken', borderwidth=1)
+        self.content_frame.pack(fill='both', expand=True, padx=2, pady=(2, 2))
+
 class TranslationDialog:
     """Dialog for managing translation settings."""
     
@@ -894,6 +911,9 @@ class BibleSearchInterface:
         # Create window sections
         self.create_window_sections()
         
+        # Initialize clip buttons to disabled state
+        self.update_clip_button_states()
+        
         # Load translation settings from config
         self.load_translation_settings()
         
@@ -959,7 +979,14 @@ class BibleSearchInterface:
         for title, key, row in window_configs:
             # Force equal starting height instead of using config
             height = 120  # Always start with equal heights
-            frame = ResizableFrame(self.main_frame, title, sync_callback=self.sync_window_heights)
+            
+            # Use StaticFrame for windows 3, 4, and 5 (no drag bars)
+            # Use ResizableFrame only for window 6 (with drag bar)
+            if key == "verse_comments":  # Window 6
+                frame = ResizableFrame(self.main_frame, title, sync_callback=self.sync_window_heights)
+            else:  # Windows 3, 4, and 5
+                frame = StaticFrame(self.main_frame, title, sync_callback=self.sync_window_heights)
+            
             frame.configure(height=height)
             frame.grid(row=row, column=0, sticky='nsew', padx=2, pady=2)
             frame.grid_propagate(False)
@@ -1493,9 +1520,9 @@ TIPS FOR EFFECTIVE COMMENTS:
     def clear_search(self):
         """Clear search entry and results."""
         self.search_var.set("")
-        self.search_results_text.configure(state='normal')
         self.search_results_text.delete('1.0', tk.END)
-        self.search_results_text.configure(state='disabled')
+        # Text widget is already enabled for text selection  
+        pass
         self.search_results = []
         self.selected_search_result_index = None
         self.reading_text.delete('1.0', tk.END)
@@ -1722,14 +1749,12 @@ TIPS:
         tips_button.pack(side='right', padx=(0, 5))
         
         # Search results area
-        self.search_results_frame = ttk.Frame(search_frame.content_frame)
+        self.search_results_frame = ttk.Frame(search_frame.content_frame, relief='sunken', borderwidth=2)
         self.search_results_frame.pack(fill='both', expand=True, padx=2, pady=(0, 2))
         
         # Create search results text widget with scrollbar for better formatting
         self.search_results_text = tk.Text(self.search_results_frame, 
                                           font=('DejaVu Sans Mono', self.current_font_size),
-                                          state='disabled',
-                                          cursor='hand2',
                                           wrap='word')
         search_scrollbar = ttk.Scrollbar(self.search_results_frame, orient='vertical',
                                         command=self.search_results_text.yview)
@@ -1747,8 +1772,17 @@ TIPS:
         self.search_results_text.pack(side='left', fill='both', expand=True)
         search_scrollbar.pack(side='right', fill='y')
         
-        # Bind selection event
-        self.search_results_text.bind('<Button-1>', self.on_search_result_click)
+        # Configure text selection behavior for proper drag selection
+        # Remove default word-selection bindings that interfere with drag selection
+        self.search_results_text.bind('<Button-1>', self.on_text_click)
+        self.search_results_text.bind('<Double-Button-1>', self.on_search_result_click)
+        self.search_results_text.bind('<ButtonRelease-1>', self.update_clip_button_states)
+        self.search_results_text.bind('<KeyRelease>', self.update_clip_button_states)
+        self.search_results_text.bind('<B1-Motion>', self.update_clip_button_states)
+        self.search_results_text.bind('<<Selection>>', self.update_clip_button_states)
+        
+        # Make text widget read-only initially (allow navigation keys only)
+        self.search_results_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
         
         # Track current selection
         self.selected_search_result_index = None
@@ -1760,7 +1794,7 @@ TIPS:
         reading_frame = self.resizable_frames["reading_window"]
         
         # Create reading area with checkboxes
-        self.reading_frame = ttk.Frame(reading_frame.content_frame)
+        self.reading_frame = ttk.Frame(reading_frame.content_frame, relief='sunken', borderwidth=2)
         self.reading_frame.pack(fill='both', expand=True, padx=2, pady=2)
         
         # Create scrollable text widget for reading
@@ -1773,6 +1807,10 @@ TIPS:
         char_width = 7 * self.current_font_size // 10  # Adjust for font size
         indent_pixels = 16 * char_width  # Align wrapped text at position 16
         self.reading_text.tag_configure("verse", lmargin2=f"{indent_pixels}p")
+        
+        # Add selection event handlers for reading text
+        self.reading_text.bind('<ButtonRelease-1>', self.update_clip_button_states)
+        self.reading_text.bind('<KeyRelease>', self.update_clip_button_states)
         
         self.reading_text.pack(side='left', fill='both', expand=True)
         reading_scrollbar.pack(side='right', fill='y')
@@ -1829,7 +1867,7 @@ TIPS:
         subject_tips_button.pack(side='right', padx=(0, 5))
         
         # Subject verses display
-        self.subject_verses_frame_display = ttk.Frame(subject_frame.content_frame)
+        self.subject_verses_frame_display = ttk.Frame(subject_frame.content_frame, relief='sunken', borderwidth=2)
         self.subject_verses_frame_display.pack(fill='both', expand=True, padx=2, pady=(0, 2))
         
         # Create subject verses listbox
@@ -1843,7 +1881,7 @@ TIPS:
         subject_scrollbar.pack(side='right', fill='y')
         
         # Bind selection event
-        self.subject_verses_listbox.bind('<<ListboxSelect>>', self.on_subject_verse_select)
+        self.subject_verses_listbox.bind('<<ListboxSelect>>', self.on_subject_verse_select_and_update_clip)
     
     def create_comments_window(self):
         """Create Window 6 - Comments editor."""
@@ -1918,7 +1956,7 @@ TIPS:
                   command=self.clear_formatting).pack(side='left', padx=(10, 2))
         
         # Comments text area
-        self.comments_frame_display = ttk.Frame(comments_frame.content_frame)
+        self.comments_frame_display = ttk.Frame(comments_frame.content_frame, relief='sunken', borderwidth=2)
         self.comments_frame_display.pack(fill='both', expand=True, padx=2, pady=(0, 2))
         
         # Create comments text widget with RTF capabilities
@@ -1934,8 +1972,8 @@ TIPS:
         # Bind events to handle placeholder text and formatting
         self.comments_text.bind('<Button-1>', self.on_comment_click)
         self.comments_text.bind('<KeyPress>', self.on_comment_keypress)
-        self.comments_text.bind('<ButtonRelease-1>', self.update_formatting_buttons)
-        self.comments_text.bind('<KeyRelease>', self.update_formatting_buttons)
+        self.comments_text.bind('<ButtonRelease-1>', self.update_formatting_and_clip_buttons)
+        self.comments_text.bind('<KeyRelease>', self.update_formatting_and_clip_buttons)
         
         self.comments_text.pack(side='left', fill='both', expand=True)
         comments_scrollbar.pack(side='right', fill='y')
@@ -2040,7 +2078,6 @@ TIPS:
             search_time = time.time() - search_start_time
             
             # Clear previous results
-            self.search_results_text.configure(state='normal')
             self.search_results_text.delete('1.0', tk.END)
             
             # Display results with formatting
@@ -2071,17 +2108,19 @@ TIPS:
                 if i < len(self.search_results) - 1:
                     self.search_results_text.insert(tk.END, "\n")
             
-            self.search_results_text.configure(state='disabled')
+            # Text widget is already in normal state to allow text selection
             
-            # Enable/disable Clear, Clip and Export buttons based on results
+            # Enable/disable Clear and Export buttons based on results
+            # Clip button is now controlled by text selection only
             if self.search_results:
                 self.clear_button.configure(state='normal')
-                self.clip_button.configure(state='normal')
                 self.export_button.configure(state='normal')
             else:
                 self.clear_button.configure(state='disabled')
-                self.clip_button.configure(state='disabled')
                 self.export_button.configure(state='disabled')
+            
+            # Clip button starts disabled until text is selected
+            self.clip_button.configure(state='disabled')
             
             # Update message with total count, unique count, and timing
             result_count = len(self.search_results)
@@ -2139,52 +2178,68 @@ TIPS:
         if last_end < len(text):
             self.search_results_text.insert(tk.END, text[last_end:])
     
+    def on_text_click(self, event):
+        """Handle single click in search results - select entire verse line like Window 5."""
+        try:
+            # Get the line number that was clicked
+            click_index = self.search_results_text.index(f"@{event.x},{event.y}")
+            line_num = int(click_index.split('.')[0])
+            
+            # Clear any previous text selection
+            self.search_results_text.tag_remove('sel', '1.0', tk.END)
+            
+            # Select the entire line
+            line_start = f"{line_num}.0"
+            line_end = f"{line_num}.end"
+            self.search_results_text.tag_add('sel', line_start, line_end)
+            
+            # Update clip button state since we now have a selection
+            self.update_clip_button_states()
+            
+            # Also update the reading window like double-click used to do
+            verse_line_index = line_num - 1  # Convert to 0-based index
+            if 0 <= verse_line_index < len(self.search_results):
+                # Clear previous highlight
+                self.search_results_text.tag_remove("highlight", "1.0", tk.END)
+                
+                # Highlight the clicked line
+                self.search_results_text.tag_add("highlight", line_start, line_end)
+                
+                # Update selection
+                self.selected_search_result_index = verse_line_index
+                selected_result = self.search_results[verse_line_index]
+                
+                # Update reading window with continuous verses
+                self.update_reading_window(selected_result)
+            
+            # Ensure the text widget gets focus for proper border darkening
+            self.search_results_text.focus_set()
+            return 'break'  # Prevent default text widget behavior
+            
+        except (ValueError, tk.TclError, IndexError):
+            # If there's an error, allow default behavior
+            return None
+    
     def on_search_result_click(self, event):
-        """Handle click in search results text widget."""
-        # Get the line number that was clicked
-        click_index = self.search_results_text.index(f"@{event.x},{event.y}")
-        line_num = int(click_index.split('.')[0]) - 1
-        
-        if 0 <= line_num < len(self.search_results):
-            # Clear previous highlight
-            self.search_results_text.tag_remove("highlight", "1.0", tk.END)
-            
-            # Highlight the clicked line
-            line_start = f"{line_num + 1}.0"
-            line_end = f"{line_num + 2}.0"
-            self.search_results_text.tag_add("highlight", line_start, line_end)
-            
-            # Update selection
-            self.selected_search_result_index = line_num
-            selected_result = self.search_results[line_num]
-            
-            # Update reading window with continuous verses
-            self.update_reading_window(selected_result)
+        """Handle double-click in search results - same as single click for consistency."""
+        # Just call the single-click handler for consistency
+        return self.on_text_click(event)
     
     def clip_search_results(self):
-        """Copy all search results to clipboard."""
-        if not self.search_results:
-            self.add_message("No search results to copy.")
-            return
-        
+        """Copy selected text from search results to clipboard, or message if no selection."""
         try:
-            # Format results for clipboard
-            clipboard_text = "Bible Search Results\n"
-            clipboard_text += "=" * 20 + "\n\n"
-            
-            for result in self.search_results:
-                reference = f"{result.translation} {result.book} {result.chapter}:{result.verse}"
-                padding_needed = 16 - len(reference)
-                prefix_text = reference + " " * padding_needed
-                # Remove highlighting brackets for clean text
-                clean_text = result.highlighted_text.replace('[', '').replace(']', '')
-                clipboard_text += f"{prefix_text}{clean_text}\n"
-            
-            # Copy to clipboard
-            self.root.clipboard_clear()
-            self.root.clipboard_append(clipboard_text)
-            
-            self.add_message(f"Copied {len(self.search_results)} verses to clipboard.")
+            # Check if there's selected text
+            if self.search_results_text.tag_ranges('sel'):
+                # Get selected text
+                selected_text = self.search_results_text.get('sel.first', 'sel.last')
+                
+                # Copy to clipboard
+                self.root.clipboard_clear()
+                self.root.clipboard_append(selected_text)
+                
+                self.add_message("Copied selected text to clipboard.")
+            else:
+                self.add_message("Please select text in the search results to copy.")
             
         except Exception as e:
             self.add_message(f"Error copying to clipboard: {str(e)}")
@@ -2228,18 +2283,20 @@ TIPS:
             title = f"4. Reading Window: {translation_obj.full_name}"
             self.resizable_frames["reading_window"].title_label.configure(text=title)
         
-        # Get continuous reading verses
+        # Get continuous reading verses - load entire chapter
         continuous_verses = self.bible_search.get_continuous_reading(
             translation=selected_result.translation,
             book=selected_result.book,
             chapter=selected_result.chapter,
             start_verse=selected_result.verse,
-            num_verses=20  # Adjust based on window size
+            num_verses=None  # Load entire chapter
         )
         
         # Clear and update reading text
         self.reading_text.delete('1.0', tk.END)
         self.reading_verses = continuous_verses
+        
+        selected_verse_line = None  # Track which line contains the selected verse
         
         for i, verse in enumerate(continuous_verses):
             # Format with proper spacing like search results
@@ -2251,6 +2308,10 @@ TIPS:
             # Mark the start position for applying verse tag
             line_start = self.reading_text.index(tk.INSERT)
             
+            # Check if this is the verse that was selected
+            if verse.verse == selected_result.verse:
+                selected_verse_line = int(line_start.split('.')[0])
+            
             # Insert the formatted verse
             self.reading_text.insert(tk.END, f"{prefix_text}{verse_text}")
             
@@ -2261,6 +2322,21 @@ TIPS:
             # Add newline for next verse (except for the last one)
             if i < len(continuous_verses) - 1:
                 self.reading_text.insert(tk.END, "\n")
+        
+        # Scroll to the selected verse (center it in the visible area)
+        if selected_verse_line is not None:
+            self.reading_text.see(f"{selected_verse_line}.0")
+            # Scroll up a bit to center the verse in the visible area
+            try:
+                visible_lines = int(self.reading_text.winfo_height() / 
+                                   (self.reading_text.winfo_reqheight() / 
+                                    int(self.reading_text.index('end-1c').split('.')[0])))
+                center_offset = max(1, visible_lines // 3)
+                target_line = max(1, selected_verse_line - center_offset)
+                self.reading_text.see(f"{target_line}.0")
+            except (ValueError, ZeroDivisionError, tk.TclError):
+                # Fallback to simple see() if centering calculation fails
+                self.reading_text.see(f"{selected_verse_line}.0")
     
     def sync_reading_window_to_verse(self, verse_data):
         """Sync reading window to show the selected subject verse."""
@@ -2436,7 +2512,7 @@ TIPS:
             self.acquire_verse_button.configure(state='normal')
             self.delete_subject_button.configure(state='normal')
             self.clear_subject_button.configure(state='normal')
-            self.clip_subject_button.configure(state='normal')  # Can clip subject verses
+            self.clip_subject_button.configure(state='disabled')  # Clip based on text selection only
             self.export_subject_button.configure(state='normal')
             
             # Load verses for this subject
@@ -2478,7 +2554,7 @@ TIPS:
                     self.acquire_verse_button.configure(state='normal')
                     self.delete_subject_button.configure(state='normal')
                     self.clear_subject_button.configure(state='normal')
-                    self.clip_subject_button.configure(state='normal')  # Can clip subject verses
+                    self.clip_subject_button.configure(state='disabled')  # Clip based on text selection only
                     self.export_subject_button.configure(state='normal')
                     
                     self.load_subject_verses()
@@ -2508,6 +2584,7 @@ TIPS:
             # Clear and populate listbox
             self.subject_verses_listbox.delete(0, tk.END)
             self.subject_verse_data = []
+            self.update_subject_clip_button()  # Update clip button state
             
             for verse_ref, translation, verse_text, comments, verse_id in verses:
                 # Format with proper spacing like search results
@@ -2620,11 +2697,13 @@ TIPS:
             self.subject_verses_listbox.delete(0, tk.END)
             if hasattr(self, 'subject_verse_data'):
                 self.subject_verse_data = []
+            self.update_subject_clip_button()  # Update clip button state
             
             # Clear comments
             self.comments_text.configure(state='normal')
             self.comments_text.delete('1.0', tk.END)
-            self.comments_text.configure(state='disabled')
+            # Keep enabled for text selection but make read-only
+            self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
             
             # Update button states for no subject selected
             self.create_subject_button.configure(state='normal')  # Can create new subject
@@ -2652,6 +2731,11 @@ TIPS:
         except Exception as e:
             self.add_message(f"Error deleting subject: {str(e)}")
     
+    def on_subject_verse_select_and_update_clip(self, event):
+        """Handle subject verse selection and update clip button."""
+        self.on_subject_verse_select(event)
+        self.update_subject_clip_button()
+    
     def on_subject_verse_select(self, event):
         """Handle subject verse selection."""
         selection = self.subject_verses_listbox.curselection()
@@ -2670,7 +2754,7 @@ TIPS:
                     self.add_comment_button.configure(state='disabled')  # Can't add to existing comment
                     self.edit_comment_button.configure(state='normal')
                     self.delete_comment_button.configure(state='normal')
-                    self.clip_comment_button.configure(state='normal')  # Can copy existing comment
+                    self.clip_comment_button.configure(state='normal')  # Enable clip since there's content to copy
                     self.export_comment_button.configure(state='normal')  # Can export existing comment
                     
                     # Load the existing comment
@@ -2698,23 +2782,43 @@ TIPS:
                     self.close_comment_button.configure(state='normal')  # User can close viewing mode
                 else:
                     self.close_comment_button.configure(state='disabled')  # Nothing to close
-                self.comments_text.configure(state='disabled')
+                # Keep text widget enabled for text selection, but make it read-only
+                self.comments_text.configure(state='normal')
+                self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
                 
                 # Hide formatting toolbar when just viewing
                 self.hide_formatting_toolbar()
                 
+                # If there's comment content, auto-select it so clip button is immediately enabled
+                if self.selected_verse_data['comments']:
+                    # Select all the comment text so it's ready to clip
+                    self.comments_text.tag_add('sel', '1.0', tk.END)
+                
+                # Update clip button state
+                self.update_clip_button_states()
+                
                 # Sync reading window to show this verse
                 self.sync_reading_window_to_verse(self.selected_verse_data)
+            else:
+                # Index out of range - invalid selection
+                pass
         else:
-            # Disable comment buttons
-            self.add_comment_button.configure(state='disabled')
-            self.edit_comment_button.configure(state='disabled')
-            self.save_comment_button.configure(state='disabled')
-            self.delete_comment_button.configure(state='disabled')
-            self.close_comment_button.configure(state='disabled')
-            self.clip_comment_button.configure(state='disabled')
-            self.export_comment_button.configure(state='disabled')
-            self.selected_verse_data = None
+            # Only disable buttons if we don't have valid selected verse data
+            # This prevents disabling buttons when selection is temporarily cleared
+            if not hasattr(self, 'selected_verse_data') or not self.selected_verse_data:
+                
+                # Disable comment buttons
+                self.add_comment_button.configure(state='disabled')
+                self.edit_comment_button.configure(state='disabled')
+                self.save_comment_button.configure(state='disabled')
+                self.delete_comment_button.configure(state='disabled')
+                self.close_comment_button.configure(state='disabled')
+                self.clip_comment_button.configure(state='disabled')
+                self.export_comment_button.configure(state='disabled')
+                self.selected_verse_data = None
+            else:
+                # We have valid verse data, so don't disable buttons even if selection is cleared
+                pass
     
     def add_comment(self):
         """Add a comment to selected verse."""
@@ -2727,6 +2831,9 @@ TIPS:
         
         # Show formatting toolbar
         self.show_formatting_toolbar()
+        
+        # Update clip button state since text widget is now editable
+        self.update_clip_button_states()
         
         if not self.selected_verse_data['comments']:
             self.comments_text.insert('1.0', "Enter your comment here...")
@@ -2754,6 +2861,9 @@ TIPS:
         
         # Show formatting toolbar
         self.show_formatting_toolbar()
+        
+        # Update clip button state since text widget is now editable
+        self.update_clip_button_states()
         
         # If there's existing comment text, load it; otherwise show placeholder
         if self.selected_verse_data['comments']:
@@ -2805,9 +2915,10 @@ TIPS:
             self.selected_verse_data['comments'] = formatted_comment
             self.comment_placeholder_active = False
             
-            # Hide formatting toolbar and disable text
+            # Hide formatting toolbar but keep text selectable
             self.hide_formatting_toolbar()
-            self.comments_text.configure(state='disabled', fg='black')
+            self.comments_text.configure(state='normal', fg='black')
+            self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
             
             # Update button states after saving - now there's an existing comment
             self.add_comment_button.configure(state='disabled')  # Can't add to existing comment
@@ -2848,7 +2959,9 @@ TIPS:
                 self.selected_verse_data['comments'] = ""
                 self.comments_text.configure(state='normal')
                 self.comments_text.delete('1.0', tk.END)
-                self.comments_text.configure(state='disabled')
+                # Keep enabled for text selection but make read-only
+                self.comments_text.configure(state='normal')
+                self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
                 
                 # Update button states - now that comment is deleted, enable Add Comment, disable Edit/Delete
                 self.add_comment_button.configure(state='normal')  # Can now add comment
@@ -2886,8 +2999,9 @@ TIPS:
                 self.comment_placeholder_active = False
                 self.comments_text.configure(fg='black')
             
-            # Disable the text widget and hide formatting toolbar
-            self.comments_text.configure(state='disabled')
+            # Keep text widget enabled for selection but make read-only
+            self.comments_text.configure(state='normal')
+            self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
             self.hide_formatting_toolbar()
             
             # Reset button states based on whether the verse has a comment
@@ -2916,10 +3030,13 @@ TIPS:
             # In viewing mode - clear comment display and deselect verse
             self.comments_text.configure(state='normal')
             self.comments_text.delete('1.0', tk.END)
-            self.comments_text.configure(state='disabled')
+            # Keep enabled for text selection but make read-only
+            self.comments_text.configure(state='normal')
+            self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
             
             # Clear verse selection in the listbox
             self.subject_verses_listbox.selection_clear(0, tk.END)
+            self.update_subject_clip_button()  # Update clip button state
             
             # Disable all comment buttons
             self.add_comment_button.configure(state='disabled')
@@ -2946,11 +3063,14 @@ TIPS:
         # Clear subject verse data
         if hasattr(self, 'subject_verse_data'):
             self.subject_verse_data = []
+        self.update_subject_clip_button()  # Update clip button state
         
         # Clear comments display
         self.comments_text.configure(state='normal')
         self.comments_text.delete('1.0', tk.END)
-        self.comments_text.configure(state='disabled')
+        # Keep enabled for text selection but make read-only
+        self.comments_text.configure(state='normal')
+        self.comments_text.bind('<Key>', lambda e: 'break' if not e.keysym in ['Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End'] else None)
         
         # Update button states for no subject selected
         self.create_subject_button.configure(state='normal')  # Can create new subject
@@ -2976,29 +3096,20 @@ TIPS:
         self.add_message("Subject selection cleared.")
     
     def clip_comment(self):
-        """Copy the current comment to clipboard."""
-        if not hasattr(self, 'selected_verse_data') or not self.selected_verse_data:
-            self.add_message("Please select a verse first.")
-            return
-            
-        comment_text = self.comments_text.get('1.0', 'end-1c')
-        
-        if not comment_text.strip():
-            self.add_message("No comment to copy.")
-            return
-        
+        """Copy selected text from comments to clipboard, or message if no selection."""
         try:
-            # Format comment for clipboard
-            reference = f"{self.selected_verse_data['translation']} {self.selected_verse_data['reference']}"
-            clipboard_text = f"Comment for {reference}:\n"
-            clipboard_text += "=" * (len(reference) + 12) + "\n\n"
-            clipboard_text += comment_text
-            
-            # Copy to clipboard
-            self.root.clipboard_clear()
-            self.root.clipboard_append(clipboard_text)
-            
-            self.add_message(f"Copied comment for {reference} to clipboard.")
+            # Check if there's selected text
+            if self.comments_text.tag_ranges('sel'):
+                # Get selected text
+                selected_text = self.comments_text.get('sel.first', 'sel.last')
+                
+                # Copy to clipboard
+                self.root.clipboard_clear()
+                self.root.clipboard_append(selected_text)
+                
+                self.add_message("Copied selected text to clipboard.")
+            else:
+                self.add_message("Please select text in the comments to copy.")
             
         except Exception as e:
             self.add_message(f"Error copying comment to clipboard: {str(e)}")
@@ -3042,36 +3153,42 @@ TIPS:
             self.add_message(f"Error exporting comment: {str(e)}")
     
     def clip_subject_verses(self):
-        """Copy all verses in the current subject to clipboard."""
-        if not self.subject_var.get():
-            self.add_message("Please select a subject first.")
-            return
-            
-        if not hasattr(self, 'subject_verse_data') or not self.subject_verse_data:
-            self.add_message("No verses in current subject to copy.")
-            return
-        
+        """Copy selected text from reading window or subject listbox to clipboard."""
         try:
-            # Format subject verses for clipboard
-            clipboard_text = f"Subject: {self.subject_var.get()}\n"
-            clipboard_text += "=" * (len(self.subject_var.get()) + 9) + "\n\n"
-            
-            for verse_data in self.subject_verse_data:
-                reference = f"{verse_data['translation']} {verse_data['reference']}"
-                padding_needed = 16 - len(reference)
-                prefix_text = reference + " " * padding_needed
-                clipboard_text += f"{prefix_text}{verse_data['text']}\n"
+            # Check if there's selected text in the reading window (Window 4)
+            if hasattr(self, 'reading_text') and self.reading_text.tag_ranges('sel'):
+                # Get selected text from reading window
+                selected_text = self.reading_text.get('sel.first', 'sel.last')
                 
-                # Include comments if they exist
-                if verse_data['comments']:
-                    clipboard_text += f"    Comment: {verse_data['comments']}\n"
-                clipboard_text += "\n"
-            
-            # Copy to clipboard
-            self.root.clipboard_clear()
-            self.root.clipboard_append(clipboard_text)
-            
-            self.add_message(f"Copied {len(self.subject_verse_data)} verses from '{self.subject_var.get()}' to clipboard.")
+                # Copy to clipboard
+                self.root.clipboard_clear()
+                self.root.clipboard_append(selected_text)
+                
+                self.add_message("Copied selected text from reading window to clipboard.")
+                
+            # Check if there's a selection in the subject verses listbox (Window 5)
+            elif hasattr(self, 'subject_verses_listbox') and self.subject_verses_listbox.curselection():
+                selection = self.subject_verses_listbox.curselection()
+                if selection and hasattr(self, 'subject_verse_data'):
+                    index = selection[0]
+                    if index < len(self.subject_verse_data):
+                        verse_data = self.subject_verse_data[index]
+                        reference = f"{verse_data['translation']} {verse_data['reference']}"
+                        padding_needed = 16 - len(reference)
+                        prefix_text = reference + " " * padding_needed
+                        clipboard_text = f"{prefix_text}{verse_data['text']}"
+                        
+                        # Copy to clipboard
+                        self.root.clipboard_clear()
+                        self.root.clipboard_append(clipboard_text)
+                        
+                        self.add_message("Copied selected verse to clipboard.")
+                    else:
+                        self.add_message("Invalid verse selection.")
+                else:
+                    self.add_message("No verse selected in subject list.")
+            else:
+                self.add_message("Please select text in the reading window or a verse in the subject list.")
             
         except Exception as e:
             self.add_message(f"Error copying to clipboard: {str(e)}")
@@ -3358,6 +3475,89 @@ TIPS:
         # This would update button states to show current formatting
         # Implementation can be added later for visual feedback
         pass
+    
+    def update_clip_button_states(self, event=None):
+        """Update clip button states based on text selections."""
+        # Check search results text selection (Window 3)
+        if hasattr(self, 'search_results_text') and hasattr(self, 'clip_button'):
+            try:
+                sel_ranges = self.search_results_text.tag_ranges('sel')
+                if sel_ranges:
+                    self.clip_button.configure(state='normal')
+                else:
+                    self.clip_button.configure(state='disabled')
+            except (AttributeError, tk.TclError):
+                pass
+        
+        # Check reading text selection (Window 4)
+        if hasattr(self, 'reading_text') and hasattr(self, 'clip_subject_button'):
+            try:
+                if self.reading_text.tag_ranges('sel'):
+                    self.clip_subject_button.configure(state='normal')
+                else:
+                    # Only disable if there's no listbox selection either
+                    self.update_subject_clip_button()
+            except (AttributeError, tk.TclError):
+                pass
+        
+        # Check comments text selection (Window 6)
+        if hasattr(self, 'comments_text') and hasattr(self, 'clip_comment_button'):
+            try:
+                # If there's text selection, enable clip button
+                if self.comments_text.tag_ranges('sel'):
+                    self.clip_comment_button.configure(state='normal')
+                else:
+                    # Only disable if there's no comment content at all
+                    comment_content = self.comments_text.get('1.0', 'end-1c').strip()
+                    if not comment_content or (hasattr(self, 'comment_placeholder_active') and self.comment_placeholder_active):
+                        self.clip_comment_button.configure(state='disabled')
+                    # If there's comment content but no selection, keep button enabled so user can select and clip
+            except (AttributeError, tk.TclError):
+                pass
+    
+    def update_subject_clip_button(self, event=None):
+        """Update subject clip button based on listbox selection or reading text selection."""
+        if not hasattr(self, 'clip_subject_button'):
+            return
+            
+        try:
+            # Check if there's text selected in reading window (Window 4)
+            if hasattr(self, 'reading_text') and self.reading_text.tag_ranges('sel'):
+                self.clip_subject_button.configure(state='normal')
+            # Check if there's a selection in subject verses listbox (Window 5)
+            elif hasattr(self, 'subject_verses_listbox') and self.subject_verses_listbox.curselection():
+                self.clip_subject_button.configure(state='normal')
+            else:
+                self.clip_subject_button.configure(state='disabled')
+        except (AttributeError, tk.TclError):
+            self.clip_subject_button.configure(state='disabled')
+    
+    def update_formatting_and_clip_buttons(self, event=None):
+        """Update both formatting and clip button states."""
+        self.update_formatting_buttons(event)
+        self.update_clip_button_states(event)
+    
+    def prevent_text_editing(self, event):
+        """Prevent text editing while allowing navigation and selection keys."""
+        # Allow navigation keys
+        allowed_keys = {
+            'Up', 'Down', 'Left', 'Right', 'Prior', 'Next', 'Home', 'End',
+            'Control_L', 'Control_R', 'Shift_L', 'Shift_R', 'Alt_L', 'Alt_R'
+        }
+        
+        # Allow Ctrl+C for copying
+        if event.keysym == 'c' and (event.state & 0x4):  # Ctrl is pressed
+            return None
+        
+        # Allow Ctrl+A for select all
+        if event.keysym == 'a' and (event.state & 0x4):  # Ctrl is pressed
+            return None
+        
+        # Block everything else except allowed navigation keys
+        if event.keysym not in allowed_keys:
+            return 'break'
+        
+        return None
     
     def save_formatted_comment(self):
         """Save comment with formatting information as JSON."""
