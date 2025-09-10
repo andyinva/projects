@@ -1,0 +1,72 @@
+2025-09-10 17:50:10,522 - Application starting
+2025-09-10 17:50:10,524 - Subjects database initialized successfully
+2025-09-10 17:50:10,524 - Setting up UI...
+2025-09-10 17:50:10,559 - Warning: Could not set subject tree background: unknown option "-selectbackground"
+2025-09-10 17:50:10,561 - Loaded 3 subjects
+2025-09-10 17:50:10,561 - UI setup completed successfully
+2025-09-10 17:50:10,561 - Loading configuration...
+2025-09-10 17:50:10,562 - Loaded MainFontSize: 11
+2025-09-10 17:50:10,562 - Loaded OtherFontSize: 11
+2025-09-10 17:50:10,562 - Restored window geometry: 941x1021+382+32
+2025-09-10 17:50:10,562 - Configuration loaded successfully
+2025-09-10 17:50:10,562 - Displaying Bible view from position: 1
+2025-09-10 17:50:10,562 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:50:10,564 - Starting main application loop
+2025-09-10 17:50:21,196 - Selected from history: matthew 13:30 (mode: verse)
+2025-09-10 17:50:22,478 - Search button clicked
+2025-09-10 17:50:25,004 - Search results selection event triggered
+2025-09-10 17:50:25,004 - Selection: ('I001',)
+2025-09-10 17:50:25,004 - Selected item values: ('Matthew 13:30', 'KJV', 'Let both grow tgthr until . hrvst: ... the time of hrvst I . say ... rprs, Gthr ye tgthr first . tares, . bind them . bndls . burn them: . gthr . wheat . my barn.')
+2025-09-10 17:50:25,004 - Extracted reference: Matthew 13:30, translation: KJV
+2025-09-10 17:50:25,004 - Navigating to verse: Matthew 13:30
+2025-09-10 17:50:25,005 - Found verse ID: 23570
+2025-09-10 17:50:25,005 - Setting Bible position to: 23570
+2025-09-10 17:50:25,005 - Displaying Bible view from position: 23570
+2025-09-10 17:50:25,005 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:50:26,584 - Bible verse click - navigating to: Matthew 13:30
+2025-09-10 17:50:26,584 - Navigating to verse: Matthew 13:30
+2025-09-10 17:50:26,585 - Found verse ID: 23570
+2025-09-10 17:50:26,585 - Setting Bible position to: 23570
+2025-09-10 17:50:26,585 - Displaying Bible view from position: 23570
+2025-09-10 17:50:26,585 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:50:52,121 - Bible verse click - navigating to: Matthew 13:31
+2025-09-10 17:50:52,123 - Navigating to verse: Matthew 13:31
+2025-09-10 17:50:52,125 - Found verse ID: 23571
+2025-09-10 17:50:52,125 - Setting Bible position to: 23571
+2025-09-10 17:50:52,125 - Displaying Bible view from position: 23571
+2025-09-10 17:50:52,125 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:51:00,443 - Unchecked 1 moved verses in Bible Reading View
+2025-09-10 17:51:00,443 - Moved 1 verses to subject: Test Subject
+2025-09-10 17:51:05,553 - Subject verse selection - navigating to: Matthew 13:32
+2025-09-10 17:51:05,553 - Navigating to verse: Matthew 13:32
+2025-09-10 17:51:05,555 - Found verse ID: 23572
+2025-09-10 17:51:05,555 - Setting Bible position to: 23572
+2025-09-10 17:51:05,555 - Displaying Bible view from position: 23572
+2025-09-10 17:51:05,555 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:51:11,512 - Subject verse selection - navigating to: Exodus 20:11
+2025-09-10 17:51:11,513 - Navigating to verse: Exodus 20:11
+2025-09-10 17:51:11,514 - Found verse ID: 2063
+2025-09-10 17:51:11,514 - Setting Bible position to: 2063
+2025-09-10 17:51:11,514 - Displaying Bible view from position: 2063
+2025-09-10 17:51:11,514 - Using translation: KJV, column: king_james_bible
+2025-09-10 17:51:30,800 - Saving configuration...
+2025-09-10 17:51:30,801 - Configuration saved successfully
+2025-09-10 17:51:30,801 - Application closing
+2025-09-10 18:02:25,274 - Application starting
+2025-09-10 18:02:25,283 - Subjects database initialized successfully
+2025-09-10 18:02:25,283 - Setting up UI...
+2025-09-10 18:02:25,309 - Warning: Could not set subject tree background: unknown option "-selectbackground"
+2025-09-10 18:02:25,311 - Loaded 0 subjects
+2025-09-10 18:02:25,311 - UI setup completed successfully
+2025-09-10 18:02:25,311 - Loading configuration...
+2025-09-10 18:02:25,311 - Loaded MainFontSize: 11
+2025-09-10 18:02:25,311 - Loaded OtherFontSize: 11
+2025-09-10 18:02:25,311 - Restored window geometry: 941x1021+350+0
+2025-09-10 18:02:25,312 - Configuration loaded successfully
+2025-09-10 18:02:25,312 - Displaying Bible view from position: 1
+2025-09-10 18:02:25,312 - Using translation: KJV, column: king_james_bible
+2025-09-10 18:02:25,312 - Error displaying Bible view: no such table: bible_verses
+2025-09-10 18:02:25,312 - Starting main application loop
+2025-09-10 18:02:41,836 - Saving configuration...
+2025-09-10 18:02:41,839 - Configuration saved successfully
+2025-09-10 18:02:41,839 - Application closing

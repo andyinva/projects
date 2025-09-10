@@ -1,0 +1,250 @@
+Add new features to bible_search.py
+A system to collect, organize, and manage scripture verses from search results into custom subject-based lists with editing capabilities.
+User Interface Layout (Top to Bottom)
+1. Search Results Section
+
+Search results display box with scripture references
+Selection checkboxes on the left side of each verse reference
+"Create" button to initiate new subject creation
+"Move" button to move selected passages from search results to subject list database
+
+2. Subject Management Bar
+
+Fixed horizontal bar spanning full width below search results
+Dropdown menu to select existing subjects or enter/create new subjects
+"Move" button to transfer selected verses to chosen subject
+
+3. Navigation and Action Controls
+
+Four navigation buttons (line up/down and page up/down for browsing when not editing)
+"Create New Entry" button
+"Delete Entry" button
+"Edit" button (activates text editor)
+"Save" button (appears during editing mode)
+"Delete Subject" button (removes entire subject and its verses from database)
+"Export" button (saves subject to user's chosen location, defaults to application directory)
+
+4. Subject Verses Display Section
+
+Subject verse display window showing verses for selected subject
+Selection checkboxes on left side of each verse reference
+Simple text editing capability allowing comments between verse lines
+Delete functionality for selected verses via checkboxes
+
+Workflow Process
+
+Search and Select: User searches scripture, checks desired verses
+Create/Choose Subject: User creates new subject or selects existing from dropdown
+Move Verses: Selected verses transfer to subject database
+Manage Lists: Navigate, edit (add comments), and organize subject-based verse collections
+Save Changes: Preserve edits and modifications
+Export/Delete: Export subjects or remove entire subjects from database
+
+Technical Details
+
+Storage: All data stored in existing SQLite database
+Export: Subjects can be exported to user-specified locations with application directory as default
+
+Key Features
+
+Persistent storage of custom scripture subjects in SQLite database
+Checkbox-based selection system for both search results and subject lists
+In-line text editing with comment insertion capabilities
+Full CRUD operations (Create, Read, Update, Delete) for subject management
+Subject export functionality for sharing or backup
+Complete subject deletion capability
+
+What's new:
+  • Added --settings flag to load settings from a JSON file
+
+> Can you move the search result navigation buttons verticly to the right 
+  of the search result windows. They will then placed just like the subject
+   verse window navigation buttons.
+
+● I'll help you move the search result navigation buttons vertically to the
+   right of the search result windows. Let me first explore the codebase to
+   understand the current layout and find the relevant files.
+
+● Update Todos
+  ⎿  ☐ Explore codebase to find search result components and navigation    
+       buttons
+     ☐ Modify search result navigation layout to match subject verse style
+     ☐ Locate subject verse window navigation buttons for reference
+
+● Search(pattern: "**/*.{js,jsx,ts,tsx,html,css,vue,svelte}")
+  ⎿  Found 0 files 
+
+● Search(pattern: "search.*result")
+  ⎿  Found 7 files (ctrl+r to expand)
+
+● Search(pattern: "navigation.*button")
+  ⎿  Found 2 files (ctrl+r to expand)
+
+● List(.)
+  ⎿  Listed 22 paths (ctrl+r to expand)
+
+● Read(bible_search.py)
+  ⎿  Error: File content (25220 tokens) exceeds maximum allowed tokens 
+     (25000). Please use offset and limit parameters to read specific 
+     portions of the file, or use the GrepTool to search for specific 
+     content.
+
+● Search(pattern: "class.*Search|def.*search", path: "bible_search.py",
+        output_mode: "content")
+  ⎿  Found 12 lines (ctrl+r to expand)
+
+● Search(pattern: "navigation|nav.*button|button.*nav", path:
+        "bible_search.py", output_mode: "content")
+  ⎿  Found 17 lines (ctrl+r to expand)
+
+● Now I can see the structure! Let me examine the search results section
+  more closely and compare it with the subject verse window layout.
+
+● Update Todos
+  ⎿  ☒ Explore codebase to find search result components and navigation    
+       buttons
+     ☐ Locate subject verse window navigation buttons for reference
+     ☐ Modify search result navigation layout to match subject verse style
+
+● Read(bible_search.py)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+● Read(bible_search.py)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+● Now let me find the search results treeview area to understand its
+  current layout:
+
+● Search(pattern: "results.*tree|tree.*results", path: "bible_search.py",
+        output_mode: "content")
+  ⎿  Found 67 lines (ctrl+r to expand)
+
+● Read(bible_search.py)
+  ⎿  Read 40 lines (ctrl+r to expand)
+
+● Update Todos
+  ⎿  ☒ Explore codebase to find search result components and navigation    
+       buttons
+     ☒ Locate subject verse window navigation buttons for reference
+     ☐ Modify search result navigation layout to match subject verse style
+
+● Perfect! I can see the structure clearly now. Currently, the search
+  result navigation buttons are positioned horizontally in the header area
+  (lines 187-195), while the subject verse window has them positioned
+  vertically on the right side (lines 329-336). I need to move the search
+  result navigation buttons to match the subject verse layout.
+
+● Update(bible_search.py)
+  ⎿  Updated bible_search.py with 11 additions and 11 removals             
+       184            self.export_button = ttk.Button(results_header_frame, 
+             text="Export", command=self.export_results, state=tk.DISABLED)
+       185            self.export_button.grid(row=0, column=4, sticky=tk.W, 
+             padx=(0, 10))
+       186            
+       187 -          # Navigation buttons frame on the right side
+       188 -          nav_buttons_frame = ttk.Frame(results_header_frame)
+       189 -          nav_buttons_frame.grid(row=0, column=5, sticky=tk.E)
+       187            
+       188 -          # Scroll and page navigation buttons
+       189 -          ttk.Button(nav_buttons_frame, text="↑", width=3, 
+           - command=self.scroll_up).grid(row=0, column=0, padx=1)
+       190 -          ttk.Button(nav_buttons_frame, text="↓", width=3, 
+           - command=self.scroll_down).grid(row=0, column=1, padx=1)
+       191 -          ttk.Button(nav_buttons_frame, text="⤴", width=3, 
+           - command=self.page_up).grid(row=0, column=2, padx=1)
+       192 -          ttk.Button(nav_buttons_frame, text="⤵", width=3, 
+           - command=self.page_down).grid(row=0, column=3, padx=1)
+       193 -          
+       188            # Configure the header frame to expand properly
+       189            results_header_frame.columnconfigure(0, weight=1)
+       190            
+     ...
+       222            self.subject_combobox.bind('<<ComboboxSelected>>', 
+             self.on_subject_selected)
+       223            
+       224            # Search results treeview with checkboxes
+       225 -          # Create treeview with scrollbars
+       225 +          # Create container for treeview and navigation 
+     buttons
+       226            tree_frame = ttk.Frame(search_results_frame)
+       227            tree_frame.grid(row=1, column=0, columnspan=3, 
+             sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+       228            
+     ...
+       248            
+       249            # Grid the treeview and scrollbars
+       250            self.results_tree.grid(row=0, column=0, sticky=(tk.W, 
+             tk.E, tk.N, tk.S))
+       251 -          tree_v_scrollbar.grid(row=0, column=1, sticky=(tk.N, 
+     tk.S))
+           - tk.S))
+       251 +          tree_v_scrollbar.grid(row=0, column=2, sticky=(tk.N, 
+     tk.S))
+           + tk.S))
+       252            tree_h_scrollbar.grid(row=1, column=0, sticky=(tk.E, 
+             tk.W))
+       253            
+       254 +          # Navigation buttons on right side (matching subject 
+           + verse layout)
+       255 +          results_nav_frame = ttk.Frame(tree_frame)
+       256 +          results_nav_frame.grid(row=0, column=1, sticky=(tk.N, 
+           + tk.S), padx=(5, 0))
+       257 +          
+       258 +          ttk.Button(results_nav_frame, text="↑", width=3, 
+           + command=self.scroll_up).grid(row=0, column=0, pady=(0, 2))
+       259 +          ttk.Button(results_nav_frame, text="↓", width=3, 
+           + command=self.scroll_down).grid(row=1, column=0, pady=(0, 2))
+       260 +          ttk.Button(results_nav_frame, text="⤴", width=3, 
+           + command=self.page_up).grid(row=2, column=0, pady=(10, 2))
+       261 +          ttk.Button(results_nav_frame, text="⤵", width=3, 
+           + command=self.page_down).grid(row=3, column=0)
+       262 +          
+       263            # Configure grid weights for tree_frame
+       264            tree_frame.columnconfigure(0, weight=1)
+       265            tree_frame.rowconfigure(0, weight=1)
+
+● Update Todos
+  ⎿  ☒ Explore codebase to find search result components and navigation    
+       buttons
+     ☒ Modify search result navigation layout to match subject verse style
+     ☒ Locate subject verse window navigation buttons for reference
+
+● Perfect! I've successfully moved the search result navigation buttons
+  from the horizontal layout in the header to a vertical layout on the
+  right side of the search results window, matching the subject verse
+  window layout.
+
+  Changes Made:
+
+  1. Removed the horizontal navigation buttons from the results header
+  frame (lines 187-195)
+  2. Added vertical navigation buttons to the right side of the search
+  results treeview
+  3. Updated the scrollbar positioning to accommodate the new navigation
+  layout
+  4. Matched the exact styling and positioning used in the subject verse
+  window
+
+  The navigation buttons now appear vertically stacked on the right side of
+   the search results window, just like in the subject verse window, with:
+  - ↑ (scroll up)
+  - ↓ (scroll down)
+  - ⤴ (page up)
+  - ⤵ (page down)
+
+  The layout is now consistent between both windows, with the navigation
+  buttons positioned vertically to the right of each respective content
+  area.
+
+1. Rename the "Show unique Verses only" to "Only Unique Verse"
+**2. When you create a new subject title, can you make the new Subject title entry point in the drop down box where you select subjects to which you attache verses. This would replace the box that opens up for the title of the subject that is used now. 
+3. Can you have message box back ground blink twice in yellow any time a new message is displayed. Have the message remain in he window 3 sec. Then replace the new message with the message that was previously there. Also can you put a dropdown on the messaging window so you can view and not select the previouse 10 messages. 
+**4. When you click "Move to Subject" button, once the move is completed un-check the checked boxes next to the verse in the Search Results window that was originaly selected before the move. Keep in mind that some time multiple verses may be checked which must be unchecked after being moved. 
+5. rename the "Comments"  window to "Subject Verse Comments"
+**6. Have the Bible Reading View set to the top of the windows when a verse is selected. It is now set to have one verse displayed above the target verse. But now after using it I find it would be better to have target verse to be in the first position at the top of the windows.
+7. change the title on Export button in the Search Results window to now say "Export Search".
+8. Change "Abbreviate" check box to "Abbreviate Results".
+9. Remove the word "Translation" from between Reference and Verse Text. In both the "Search Results" Window and the "Subject Verses" Windows. But do not remove the translation designater that come after the Bible reference and before the Verse text.So the text in the display will look like this "Joel 2:11 KJB ...LORD Shell utter his voice...". The reason I am doing this is so that I can move the Verse Text close to the translation designater. If the word "Translation" is in the header and I reduce the Coulomb width it will cut off part of the "Translation" header.
+**10. If I do a "Verse Search" When it populates the Search Results window the Check boxes are not visible. But if I click on the verse it shows up. can you make the check box show up when the Search Results window is first populated after a new search? I notice that the Word Search check boxes do not show this behavior they shows up properly.
+11. If you try to move a verse that is already in the Subject Verse database have a message show up in the messaging box saying its allread in the database.
+**12. There are a mixed set of fonts sizes used in the four windows that display Bible Verses. 

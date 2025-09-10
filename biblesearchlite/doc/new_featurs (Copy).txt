@@ -1,0 +1,47 @@
+
+1. If you try to move a verse that is already in the Subject Verse database have a message show up in the messaging box saying its all ready in the database.
+2. Can you combine the message display windows with the message history drop down? So new messages will appear in the displayed line in drop down and 10 previous messages will be displayed in the drop down. Then you can removed the current history drop down. This will combine the two into one. 
+1. Can you rename the "Comments" window to "Subject Verse Comments"
+2. change the title on "Export" button in the Search Results window to: "Export Search".
+3. Change "Abbreviate" check box to "Abbreviate Results".
+4. Remove the word "Translation" from between the "Reference" header and the verse "Text" header. In both the "Search Results" Window and the "Subject Verses" Window. But do not remove the translation label that comes after the Bible reference and before the Verse "text". So the text in the display will look like this example: "Joel 2:11 KJB ...LORD Shell utter his voice...". The reason I am doing this is so that I can move the Verse Text close to the translation label. If the word "Translation" is in the header and I reduce the column width it will not cut off part of the "Translation" header because it has been removed.
+5. Rename the "Show unique Verses only" to "Only Unique Verse"
+
+
+Database Summary:
+
+  - Size: 185.2 MB
+  - Total Tables: 11 tables
+  - Total Verses: 31,102 Bible verses
+
+  Translation Coverage:
+
+  Complete Coverage (31,102 verses):
+  - King James Bible, American Standard Version, Douay Rheims Bible
+  - Darby Bible Translation, English Revised Version, Webster Bible Translation
+  - World English Bible, Young's Literal Translation, American King James Version
+  - Weymouth New Testament
+
+  New Translations Added (~28,600+ verses each):
+  - Bishops Bible (28,641 verses)
+  - Coverdale Bible (28,635 verses)
+  - Geneva Bible (28,641 verses)
+  - NET Bible (28,641 verses)
+  - Tyndale Bible (28,624 verses)
+
+  Advanced Features:
+
+  - 859,736 word-level translation mappings
+  - 7,500 indexed biblical words
+  - 2,352 synonym relationships with confidence scores
+  - 35,077 synonym evidence records
+  - 21 semantic word groups
+  - 3 biblical subjects with 25 verse relationships
+
+  What You Can Now Do:
+
+  - Cross-translation verse comparisons across 15 Bible versions
+  - Advanced synonym detection and word relationship analysis
+  - Word-level translation mapping and contextual analysis
+  - Thematic Bible study with subject categorization
+

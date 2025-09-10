@@ -1,0 +1,43 @@
+{
+  "SearchHistory": [],
+  "IgnoreCase": false,
+  "UniqueOnly": false,
+  "Abbreviate": false,
+  "BibleScope": "bible",
+  "ProximityWindow": 5,
+  "MainFontSize": 10,
+  "OtherFontSize": 9,
+  "Book": "All",
+  "Chapter": 0,
+  "Translation": "",
+  "SelectedTranslations": {
+    "KJV": true,
+    "ASV": false,
+    "DRB": false,
+    "DBT": false,
+    "ERV": false,
+    "WBT": false,
+    "WEB": false,
+    "YLT": false,
+    "AKJV": false,
+    "WNT": false
+  },
+  "TranslationOrder": {
+    "KJV": 1,
+    "ASV": 2,
+    "DRB": 3,
+    "DBT": 4,
+    "ERV": 5,
+    "WBT": 6,
+    "WEB": 7,
+    "YLT": 8,
+    "AKJV": 9,
+    "WNT": 10
+  },
+  "SearchHeight": 10,
+  "VerseHeight": 15,
+  "SubjectHeight": 10,
+  "CommentsHeight": 5,
+  "WindowGeometry": "800x600+100+100",
+  "TestSetting": "test_value"
+}
