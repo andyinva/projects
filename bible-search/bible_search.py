@@ -365,17 +365,12 @@ class BibleSearch:
                                 # For longer terms, find words containing the search term
                                 containing_pattern = r'\b\w*' + re.escape(clean_term) + r'\w*\b'
                                 for word_match in re.finditer(containing_pattern, text, flags=re.IGNORECASE):
-                                    # Find the exact position of the search term within this word
+                                    # Highlight the entire word that contains the search term
+                                    # This ensures "fruitful" is bracketed as "[fruitful]" not "[fruit]ful"
                                     word_text = word_match.group(0)
                                     word_start = word_match.start()
-                                    
-                                    # Find where the search term appears within this word
-                                    term_pattern = re.escape(clean_term)
-                                    for term_match in re.finditer(term_pattern, word_text, flags=re.IGNORECASE):
-                                        # Calculate the absolute position in the original text
-                                        term_start = word_start + term_match.start()
-                                        term_end = word_start + term_match.end()
-                                        matches_to_highlight.append((term_start, term_end, term_match.group(0)))
+                                    word_end = word_match.end()
+                                    matches_to_highlight.append((word_start, word_end, word_text))
         
         # Sort matches by position (reverse order for easier processing)
         matches_to_highlight.sort(key=lambda x: x[0], reverse=True)

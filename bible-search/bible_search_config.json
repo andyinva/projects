@@ -1,6 +1,6 @@
 {
-  "window_width": 1024,
-  "window_height": 1114,
+  "window_width": 935,
+  "window_height": 1064,
   "window_heights": {
     "search_window": 211,
     "reading_window": 211,
@@ -18,8 +18,7 @@
     "synonyms": false,
     "fuzzy_match": false,
     "word_stems": false,
-    "within_words": false,
-    "wildcards": false
+    "within_words": false
   },
   "translations": [
     {
@@ -29,96 +28,99 @@
     },
     {
       "abbreviation": "ASV",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 2
     },
     {
       "abbreviation": "DRB",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 3
     },
     {
       "abbreviation": "DBT",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 4
     },
     {
       "abbreviation": "ERV",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 5
     },
     {
       "abbreviation": "WBT",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 6
     },
     {
       "abbreviation": "WEB",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 7
     },
     {
       "abbreviation": "YLT",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 8
     },
     {
-      "abbreviation": "AKJV",
-      "enabled": true,
+      "abbreviation": "AKJ",
+      "enabled": false,
       "sort_order": 9
     },
     {
       "abbreviation": "WNT",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 10
     },
     {
-      "abbreviation": "Bishops",
-      "enabled": true,
+      "abbreviation": "BIS",
+      "enabled": false,
       "sort_order": 11
     },
     {
-      "abbreviation": "Coverdale",
-      "enabled": true,
+      "abbreviation": "COV",
+      "enabled": false,
       "sort_order": 12
     },
     {
-      "abbreviation": "Geneva",
-      "enabled": true,
+      "abbreviation": "GEN",
+      "enabled": false,
       "sort_order": 13
     },
     {
-      "abbreviation": "KJVStrongs",
-      "enabled": true,
+      "abbreviation": "KJS",
+      "enabled": false,
       "sort_order": 14
     },
     {
       "abbreviation": "NET",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 15
     },
     {
-      "abbreviation": "Tyndale",
-      "enabled": true,
+      "abbreviation": "TYN",
+      "enabled": false,
       "sort_order": 16
     },
     {
       "abbreviation": "BST",
-      "enabled": true,
+      "enabled": false,
       "sort_order": 17
     }
   ],
   "font_size": 11,
   "search_history": [
-    "\"her fruit\"",
-    "\"her\" fruit",
-    "her fruit",
-    "\"her\" AND fruit",
-    "\"fruit\"",
-    "fruit",
-    "Malachi 4:1",
-    "Exo 32:1",
-    "Malachi 3:1",
-    "Joel 2:18-20"
+    "Purg* OR Pure*",
+    "Pur*",
+    "Refine*",
+    "Refine* OR Pur*",
+    "refine*",
+    "refine",
+    "white*",
+    "fuller",
+    "Whiter",
+    "White*"
+  ],
+  "enabled_translations": [
+    "KJV"
   ]
 }

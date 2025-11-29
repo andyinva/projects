@@ -903,7 +903,6 @@ class BibleSearchInterface:
         self.fuzzy_match_var = tk.BooleanVar(value=self.config_manager.get('search_settings', {}).get('fuzzy_match', False))
         self.word_stems_var = tk.BooleanVar(value=self.config_manager.get('search_settings', {}).get('word_stems', False))
         self.within_words_var = tk.BooleanVar(value=self.config_manager.get('search_settings', {}).get('within_words', False))
-        self.wildcards_var = tk.BooleanVar(value=self.config_manager.get('search_settings', {}).get('wildcards', False))
         
         # Initialize font size
         self.current_font_size = self.config_manager.get('font_size', 10)
@@ -943,29 +942,29 @@ class BibleSearchInterface:
     def create_window_sections(self):
         """Create all six window sections."""
         
-        # 1. Search Settings Window (static height)
-        self.search_settings_frame = ttk.Frame(
-            self.main_frame, 
-            relief='solid', 
-            borderwidth=1,
-            height=self.config_manager.get('static_heights')['search_settings']
-        )
-        self.search_settings_frame.grid(row=0, column=0, sticky='ew', padx=2, pady=2)
-        self.search_settings_frame.grid_propagate(False)
-        self.search_settings_frame.grid_columnconfigure(0, weight=1)
-        self.create_search_settings()
-        
-        # 2. Message Window (static height)
+        # 1. Message Window (static height)
         self.message_frame = ttk.Frame(
             self.main_frame, 
             relief='solid', 
             borderwidth=1,
             height=self.config_manager.get('static_heights')['message_window']
         )
-        self.message_frame.grid(row=1, column=0, sticky='ew', padx=2, pady=2)
+        self.message_frame.grid(row=0, column=0, sticky='ew', padx=2, pady=2)
         self.message_frame.grid_propagate(False)
         self.message_frame.grid_columnconfigure(0, weight=1)
         self.create_message_window()
+        
+        # 2. Search Settings Window (static height)
+        self.search_settings_frame = ttk.Frame(
+            self.main_frame, 
+            relief='solid', 
+            borderwidth=1,
+            height=self.config_manager.get('static_heights')['search_settings']
+        )
+        self.search_settings_frame.grid(row=1, column=0, sticky='ew', padx=2, pady=2)
+        self.search_settings_frame.grid_propagate(False)
+        self.search_settings_frame.grid_columnconfigure(0, weight=1)
+        self.create_search_settings()
         
         # 3-6. Resizable Windows (all resize together with equal weight)
         self.resizable_frames = {}
@@ -1000,59 +999,16 @@ class BibleSearchInterface:
         self.create_subject_verses_window()
         self.create_comments_window()
         
-        # Create height display at bottom
-        self.create_height_display()
+        # Height display removed - no longer needed since window height issues were fixed
         
         # Force synchronization after everything is created
         self.root.after(100, self.force_initial_sync)
     
     def force_initial_sync(self):
         """Force all windows to the correct synchronized height after startup."""
-        print(f"FORCE SYNC: Setting all windows to {self.current_sync_height}px")
         self.sync_window_heights(self.current_sync_height)
     
-    def create_height_display(self):
-        """Create a display showing current window heights in real-time."""
-        # Height display frame at the very bottom
-        self.height_display_frame = ttk.Frame(self.main_frame)
-        self.height_display_frame.grid(row=6, column=0, sticky='ew', padx=2, pady=5)
-        
-        # Title
-        ttk.Label(self.height_display_frame, text="Window Heights:", 
-                 font=('Arial', 9, 'bold')).pack(side='left', padx=(5, 10))
-        
-        # Height display label
-        self.height_display_label = ttk.Label(self.height_display_frame, 
-                                            text="Loading...", 
-                                            font=('Arial', 9),
-                                            foreground='blue')
-        self.height_display_label.pack(side='left')
-        
-        # Sync height display
-        self.sync_height_label = ttk.Label(self.height_display_frame, 
-                                          text=f"Sync: {self.current_sync_height}px", 
-                                          font=('Arial', 9, 'bold'),
-                                          foreground='red')
-        self.sync_height_label.pack(side='right', padx=(10, 5))
-        
-        # Start updating heights
-        self.update_height_display()
     
-    def update_height_display(self):
-        """Update the height display in real-time."""
-        heights = []
-        for key, frame in self.resizable_frames.items():
-            height = frame.winfo_height()
-            window_num = {"search_window": "3", "reading_window": "4", 
-                         "subject_verses": "5", "verse_comments": "6"}[key]
-            heights.append(f"Win{window_num}:{height}px")
-        
-        height_text = " | ".join(heights)
-        self.height_display_label.configure(text=height_text)
-        self.sync_height_label.configure(text=f"Sync: {self.current_sync_height}px")
-        
-        # Schedule next update
-        self.root.after(500, self.update_height_display)
     
     def sync_window_heights(self, new_height):
         """Synchronize all resizable window heights using an ultra-aggressive approach."""
@@ -1095,8 +1051,7 @@ class BibleSearchInterface:
         static_heights = self.config_manager.get('static_heights')
         total_static = static_heights['search_settings'] + static_heights['message_window']
         total_resizable = new_height * 4  # 4 resizable windows
-        height_display = 30  # Height of our debug display
-        total_height = total_static + total_resizable + height_display + 60  # Add padding
+        total_height = total_static + total_resizable + 40  # Add padding
         current_width = self.root.winfo_width()
         
         # Resize main window to fit content
@@ -1107,23 +1062,10 @@ class BibleSearchInterface:
     
     def create_search_settings(self):
         """Create the search settings window."""
-        # Title with gear button
-        header_frame = ttk.Frame(self.search_settings_frame)
-        header_frame.grid(row=0, column=0, sticky='ew', padx=5, pady=2)
-        header_frame.grid_columnconfigure(0, weight=1)
-        
-        title_label = ttk.Label(header_frame, text="1. Search Settings", 
+        # Title
+        title_label = ttk.Label(self.search_settings_frame, text="2. Search Settings", 
                                font=('Arial', 9, 'bold'))
-        title_label.grid(row=0, column=0, sticky='w')
-        
-        # Gear button
-        self.gear_button = ttk.Button(header_frame, text="⚙", width=3)
-        self.gear_button.grid(row=0, column=1, sticky='e', padx=(5, 0))
-        
-        # Bind mouse events to show menu on press
-        self.gear_button.bind('<Button-1>', self.on_gear_button_press)
-        
-        self.gear_menu = None  # Store menu reference
+        title_label.grid(row=0, column=0, sticky='w', padx=5, pady=2)
         
         # Content frame
         content_frame = ttk.Frame(self.search_settings_frame, relief='sunken', borderwidth=1)
@@ -1157,10 +1099,6 @@ class BibleSearchInterface:
                        variable=self.word_stems_var).pack(side='left', padx=(0, 15))
         ttk.Checkbutton(advanced_frame, text="Within 5 Words", 
                        variable=self.within_words_var).pack(side='left', padx=(0, 15))
-        # Note: Wildcards (*,?,!,AND,OR) are always available - see Tips for help
-        wildcards_cb = ttk.Checkbutton(advanced_frame, text="(See Tips for wildcards)", 
-                                      variable=self.wildcards_var, state='disabled')
-        wildcards_cb.pack(side='left')
     
     def on_gear_button_press(self, event):
         """Handle gear button press - show menu."""
@@ -1240,6 +1178,35 @@ class BibleSearchInterface:
         """Hide gear menu and show backup dialog."""
         self.hide_gear_menu()
         self.show_backup_dialog()
+    
+    def on_info_button_press(self, event):
+        """Handle info button press - show info window."""
+        if self.info_window:
+            self.info_window.lift()
+            return
+            
+        self.info_window = tk.Toplevel(self.root)
+        self.info_window.title("Information")
+        self.info_window.geometry("300x200")
+        self.info_window.resizable(False, False)
+        
+        # Center the window
+        self.info_window.transient(self.root)
+        self.info_window.grab_set()
+        
+        # Close button
+        close_button = ttk.Button(self.info_window, text="Close", 
+                                 command=self.close_info_window)
+        close_button.pack(pady=20)
+        
+        # Handle window close
+        self.info_window.protocol("WM_DELETE_WINDOW", self.close_info_window)
+    
+    def close_info_window(self):
+        """Close the info window."""
+        if self.info_window:
+            self.info_window.destroy()
+            self.info_window = None
     
     def show_translation_dialog(self):
         """Show translation settings dialog."""
@@ -1527,12 +1494,218 @@ TIPS FOR EFFECTIVE COMMENTS:
         self.selected_search_result_index = None
         self.reading_text.delete('1.0', tk.END)
         
-        # Disable Clear, Clip and Export buttons when no results
+        # Disable Clear, Clip, Sum and Export buttons when no results
         self.clear_button.configure(state='disabled')
         self.clip_button.configure(state='disabled')
+        self.sum_button.configure(state='disabled')
         self.export_button.configure(state='disabled')
         
         self.add_message("Search cleared.")
+    
+    def show_search_summary(self):
+        """Show search summary window with statistics."""
+        if not hasattr(self, 'search_results') or not self.search_results:
+            self.add_message("No search results to summarize.")
+            return
+        
+        # Create summary window
+        summary_window = tk.Toplevel(self.root)
+        summary_window.title("Search Summary")
+        summary_window.geometry("600x400")
+        summary_window.transient(self.root)
+        summary_window.grab_set()
+        
+        # Main frame
+        main_frame = ttk.Frame(summary_window)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        
+        # Header info
+        header_frame = ttk.Frame(main_frame)
+        header_frame.pack(fill='x', pady=(0, 10))
+        
+        # Search query
+        query_label = ttk.Label(header_frame, text=f"Search Query: {self.last_search_query}", 
+                               font=('Arial', 10, 'bold'))
+        query_label.pack(anchor='w')
+        
+        # Search time
+        time_label = ttk.Label(header_frame, text=f"Search Time: {self.last_search_time:.3f} seconds")
+        time_label.pack(anchor='w')
+        
+        # Calculate totals
+        total_verses = len(self.search_results)
+        translation_stats = self.calculate_translation_word_stats()
+        total_word_matches = sum(total_count for _, _, total_count in translation_stats)
+        
+        # Total results
+        total_label = ttk.Label(header_frame, text=f"Total Verses Found: {total_verses}")
+        total_label.pack(anchor='w')
+        
+        # Total word matches
+        matches_label = ttk.Label(header_frame, text=f"Total Word Matches: {total_word_matches}")
+        matches_label.pack(anchor='w')
+        
+        # Translation statistics frame
+        stats_frame = ttk.Frame(main_frame)
+        stats_frame.pack(fill='both', expand=True, pady=(10, 0))
+        
+        # Create scrollable text widget for translation statistics
+        text_frame = ttk.Frame(stats_frame)
+        text_frame.pack(fill='both', expand=True)
+        
+        stats_text = tk.Text(text_frame, font=('DejaVu Sans Mono', 10), wrap='word')
+        scrollbar = ttk.Scrollbar(text_frame, orient='vertical', command=stats_text.yview)
+        stats_text.configure(yscrollcommand=scrollbar.set)
+        
+        stats_text.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Display statistics (translation_stats already calculated above)
+        for i, (translation, word_counts, total_count) in enumerate(translation_stats, 1):
+            if word_counts:
+                word_list = []
+                for word, count in sorted(word_counts.items()):
+                    word_list.append(f"{word} {count}")
+                word_str = ", ".join(word_list)
+                stats_text.insert(tk.END, f"{i}. {translation}: {word_str}, Total {total_count}\n")
+            else:
+                stats_text.insert(tk.END, f"{i}. {translation}: No results\n")
+        
+        # Make text widget read-only
+        stats_text.configure(state='disabled')
+        
+        # Close button
+        close_button = ttk.Button(main_frame, text="Close", command=summary_window.destroy)
+        close_button.pack(pady=(10, 0))
+    
+    def calculate_translation_word_stats(self):
+        """Calculate word statistics grouped by translation."""
+        # Get all translations in sort order
+        all_translations = sorted(self.bible_search.translations, key=lambda x: x.sort_order)
+        enabled_translations = {t.abbreviation for t in all_translations if t.enabled}
+        
+        translation_stats = []
+        
+        for translation in all_translations:
+            if translation.abbreviation not in enabled_translations:
+                continue
+                
+            # Get results for this translation
+            translation_results = [r for r in self.search_results if r.translation == translation.abbreviation]
+            
+            if not translation_results:
+                translation_stats.append((translation.abbreviation, {}, 0))
+                continue
+            
+            # Count words using comprehensive matching approach
+            word_counts = {}
+            
+            for result in translation_results:
+                # Get all words that match our search terms from this verse
+                matched_words = self.find_all_matching_words(self.last_search_query, result.text, result.highlighted_text)
+                for word in matched_words:
+                    word_counts[word] = word_counts.get(word, 0) + 1
+            
+            total_count = sum(word_counts.values())
+            translation_stats.append((translation.abbreviation, word_counts, total_count))
+        
+        return translation_stats
+    
+    def extract_highlighted_words(self, highlighted_text):
+        """Extract words from bracketed terms in highlighted text."""
+        import re
+        
+        # Find all bracketed terms
+        bracketed_terms = re.findall(r'\[([^\]]+)\]', highlighted_text)
+        
+        words = []
+        for term in bracketed_terms:
+            # Handle both single words and phrases within brackets
+            # Split term into individual words and clean them
+            term_words = re.findall(r'\b[a-zA-Z\']+\b', term)
+            for word in term_words:
+                # Clean the word (remove quotes, punctuation)
+                clean_word = word.strip("'\".,!?;:").lower()
+                if clean_word and len(clean_word) > 1:  # Skip single letters
+                    # Capitalize first letter for consistency
+                    words.append(clean_word.capitalize())
+        
+        return words
+    
+    def find_search_matches_in_text(self, query, verse_text):
+        """Find words in verse text that match search terms (handles multi-term searches)."""
+        import re
+        
+        # Extract individual search terms from query (excluding operators)
+        terms = re.findall(r'"[^"]*"|[^\s]+', query)
+        search_terms = []
+        
+        for term in terms:
+            if term.upper() not in ['AND', 'OR', '!']:
+                # Remove quotes and wildcards for matching
+                clean_term = term.strip('"').replace('*', '').replace('?', '')
+                if clean_term:
+                    search_terms.append(clean_term.lower())
+        
+        found_words = []
+        verse_lower = verse_text.lower()
+        
+        # Find all words in the verse that contain any of our search terms
+        verse_words = re.findall(r'\b[a-zA-Z\']+\b', verse_text)
+        
+        for word in verse_words:
+            word_lower = word.lower()
+            for search_term in search_terms:
+                # Check if this word contains the search term
+                if search_term in word_lower:
+                    # Capitalize first letter for consistency
+                    clean_word = word.strip("'\".,!?;:").capitalize()
+                    if clean_word and len(clean_word) > 1 and clean_word not in found_words:
+                        found_words.append(clean_word)
+                    break  # Don't double-count the same word for multiple terms
+        
+        return found_words
+    
+    def find_all_matching_words(self, query, verse_text, highlighted_text):
+        """Comprehensively find all words that match search terms, using both highlighting and text analysis."""
+        import re
+        
+        found_words = []
+        
+        # Method 1: Extract from bracketed terms (works well for single-term and exact matches)
+        bracketed_terms = re.findall(r'\[([^\]]+)\]', highlighted_text)
+        for term in bracketed_terms:
+            term_words = re.findall(r'\b[a-zA-Z\']+\b', term)
+            for word in term_words:
+                clean_word = word.strip("'\".,!?;:").capitalize()
+                if clean_word and len(clean_word) > 1:
+                    found_words.append(clean_word)
+        
+        # Method 2: Text analysis for multi-term searches (catches words that may have partial highlighting)
+        # Extract search terms from query
+        terms = re.findall(r'"[^"]*"|[^\s]+', query)
+        search_terms = []
+        
+        for term in terms:
+            if term.upper() not in ['AND', 'OR', '!']:
+                clean_term = term.strip('"').replace('*', '').replace('?', '')
+                if clean_term:
+                    search_terms.append(clean_term.lower())
+        
+        # Find words in verse that contain search terms but may not be fully bracketed
+        verse_words = re.findall(r'\b[a-zA-Z\']+\b', verse_text)
+        for word in verse_words:
+            word_lower = word.lower()
+            for search_term in search_terms:
+                if search_term in word_lower:
+                    clean_word = word.strip("'\".,!?;:").capitalize()
+                    if clean_word and len(clean_word) > 1:
+                        # Only add if not already found from bracketed terms
+                        if clean_word not in found_words:
+                            found_words.append(clean_word)
+                    break
+        
+        return found_words
     
     def show_search_tips(self):
         """Show search tips dialog."""
@@ -1686,16 +1859,44 @@ TIPS:
     
     def create_message_window(self):
         """Create the message display window."""
-        title_label = ttk.Label(self.message_frame, text="2. Message Window", 
-                               font=('Arial', 9, 'bold'))
-        title_label.grid(row=0, column=0, sticky='w', padx=5, pady=2)
-        
-        content_frame = ttk.Frame(self.message_frame, relief='sunken', borderwidth=1)
-        content_frame.grid(row=1, column=0, sticky='nsew', padx=2, pady=2)
+        # Configure main message frame
+        self.message_frame.grid_columnconfigure(0, weight=1)
         self.message_frame.grid_rowconfigure(1, weight=1)
         
-        # Create message display
-        self.message_text = tk.Text(content_frame, height=2, wrap='word', 
+        # Title with buttons
+        header_frame = ttk.Frame(self.message_frame)
+        header_frame.grid(row=0, column=0, sticky='ew', padx=5, pady=2)
+        header_frame.grid_columnconfigure(0, weight=1)
+        
+        title_label = ttk.Label(header_frame, text="1. Message Window", 
+                               font=('Arial', 9, 'bold'))
+        title_label.grid(row=0, column=0, sticky='w')
+        
+        # Button frame for gear and info buttons
+        button_frame = ttk.Frame(header_frame)
+        button_frame.grid(row=0, column=1, sticky='ne', padx=(5, 0))
+        
+        # Gear button
+        self.gear_button = ttk.Button(button_frame, text="⚙", width=3)
+        self.gear_button.pack(side='top')
+        
+        # Info button below gear button with spacing
+        self.info_button = ttk.Button(button_frame, text="i", width=3)
+        self.info_button.pack(side='top', pady=(3, 0))
+        
+        # Bind mouse events to show menu on press
+        self.gear_button.bind('<Button-1>', self.on_gear_button_press)
+        self.info_button.bind('<Button-1>', self.on_info_button_press)
+        
+        self.gear_menu = None  # Store menu reference
+        self.info_window = None  # Store info window reference
+        
+        # Content frame for message text and scrollbar
+        content_frame = ttk.Frame(self.message_frame, relief='sunken', borderwidth=1)
+        content_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=(5, 10))
+        
+        # Create message display with 3 lines height
+        self.message_text = tk.Text(content_frame, height=3, wrap='word', 
                                    font=('Arial', 9), padx=3, pady=3)
         scrollbar = ttk.Scrollbar(content_frame, orient='vertical', command=self.message_text.yview)
         self.message_text.configure(yscrollcommand=scrollbar.set)
@@ -1734,6 +1935,11 @@ TIPS:
         self.clear_button = ttk.Button(search_interface_frame, text="Clear", 
                                       command=self.clear_search, state='disabled')
         self.clear_button.pack(side='left', padx=(0, 5))
+        
+        # Sum button (next to clear button)
+        self.sum_button = ttk.Button(search_interface_frame, text="Sum", 
+                                    command=self.show_search_summary, state='disabled')
+        self.sum_button.pack(side='left', padx=(0, 5))
         
         # Export, Clip, and Tips buttons (right justified)
         self.export_button = ttk.Button(search_interface_frame, text="Export", 
@@ -2022,10 +2228,9 @@ TIPS:
         use_fuzzy = self.fuzzy_match_var.get()
         use_stems = self.word_stems_var.get()
         use_within_words = self.within_words_var.get()
-        use_wildcards = self.wildcards_var.get()
         
         # Expand query based on advanced search options
-        expanded_queries = self.expand_search_query(query, use_synonyms, use_fuzzy, use_stems, use_within_words, use_wildcards)
+        expanded_queries = self.expand_search_query(query, use_synonyms, use_fuzzy, use_stems, use_within_words)
         
         # Show active advanced features
         active_features = []
@@ -2077,6 +2282,11 @@ TIPS:
             # Calculate search time
             search_time = time.time() - search_start_time
             
+            # Store search summary data
+            self.last_search_query = query
+            self.last_search_time = search_time
+            self.last_enabled_translations = enabled_translations[:]
+            
             # Clear previous results
             self.search_results_text.delete('1.0', tk.END)
             
@@ -2110,13 +2320,15 @@ TIPS:
             
             # Text widget is already in normal state to allow text selection
             
-            # Enable/disable Clear and Export buttons based on results
+            # Enable/disable Clear, Sum and Export buttons based on results
             # Clip button is now controlled by text selection only
             if self.search_results:
                 self.clear_button.configure(state='normal')
+                self.sum_button.configure(state='normal')
                 self.export_button.configure(state='normal')
             else:
                 self.clear_button.configure(state='disabled')
+                self.sum_button.configure(state='disabled')
                 self.export_button.configure(state='disabled')
             
             # Clip button starts disabled until text is selected
@@ -2305,38 +2517,61 @@ TIPS:
             prefix_text = reference + " " * padding_needed
             verse_text = verse.text
             
-            # Mark the start position for applying verse tag
-            line_start = self.reading_text.index(tk.INSERT)
-            
             # Check if this is the verse that was selected
             if verse.verse == selected_result.verse:
-                selected_verse_line = int(line_start.split('.')[0])
+                # Line number is i+1 since text widget lines are 1-indexed
+                selected_verse_line = i + 1
+            
+            # Mark the start position for applying verse tag
+            line_start = self.reading_text.index(tk.END)
             
             # Insert the formatted verse
             self.reading_text.insert(tk.END, f"{prefix_text}{verse_text}")
             
             # Mark the end position and apply verse tag to entire line
-            line_end = self.reading_text.index(tk.INSERT)
+            line_end = self.reading_text.index(tk.END)
             self.reading_text.tag_add("verse", line_start, line_end)
             
             # Add newline for next verse (except for the last one)
             if i < len(continuous_verses) - 1:
                 self.reading_text.insert(tk.END, "\n")
         
-        # Scroll to the selected verse (center it in the visible area)
+        # Scroll to the selected verse and highlight it
         if selected_verse_line is not None:
-            self.reading_text.see(f"{selected_verse_line}.0")
-            # Scroll up a bit to center the verse in the visible area
-            try:
-                visible_lines = int(self.reading_text.winfo_height() / 
-                                   (self.reading_text.winfo_reqheight() / 
-                                    int(self.reading_text.index('end-1c').split('.')[0])))
-                center_offset = max(1, visible_lines // 3)
-                target_line = max(1, selected_verse_line - center_offset)
-                self.reading_text.see(f"{target_line}.0")
-            except (ValueError, ZeroDivisionError, tk.TclError):
-                # Fallback to simple see() if centering calculation fails
-                self.reading_text.see(f"{selected_verse_line}.0")
+            # Schedule the positioning after the text widget has updated its layout
+            def position_verse():
+                try:
+                    total_lines = int(self.reading_text.index(tk.END).split('.')[0]) - 1
+                    
+                    # Clear any existing highlights in reading window
+                    self.reading_text.tag_remove("selected_verse", "1.0", tk.END)
+                    
+                    # Position the verse as best we can
+                    self.reading_text.yview(f"{selected_verse_line}.0")
+                    
+                    # Highlight the selected verse line
+                    line_start = f"{selected_verse_line}.0"
+                    line_end = f"{selected_verse_line}.end"
+                    self.reading_text.tag_add("selected_verse", line_start, line_end)
+                    
+                    # Configure the highlight tag with a distinct background
+                    self.reading_text.tag_configure("selected_verse", 
+                                                   background="#FFFF99",  # Light yellow
+                                                   relief="raised",
+                                                   borderwidth=1)
+                    
+                    # Make sure the verse is visible
+                    self.reading_text.see(f"{selected_verse_line}.0")
+                    
+                except Exception as e:
+                    # Fallback: just make it visible
+                    try:
+                        self.reading_text.see(f"{selected_verse_line}.0")
+                    except:
+                        pass
+            
+            # Use after_idle to ensure text layout is complete before positioning
+            self.reading_text.after_idle(position_verse)
     
     def sync_reading_window_to_verse(self, verse_data):
         """Sync reading window to show the selected subject verse."""
@@ -2380,7 +2615,7 @@ TIPS:
             # If parsing fails, show an error message but don't crash
             self.add_message(f"Could not sync reading window: {str(e)}")
     
-    def expand_search_query(self, query, use_synonyms, use_fuzzy, use_stems, use_within_words, use_wildcards):
+    def expand_search_query(self, query, use_synonyms, use_fuzzy, use_stems, use_within_words):
         """Expand search query based on advanced search options."""
         expanded_terms = set([query])  # Start with original query
         
@@ -3696,8 +3931,7 @@ TIPS:
             'synonyms': self.synonyms_var.get(),
             'fuzzy_match': self.fuzzy_match_var.get(),
             'word_stems': self.word_stems_var.get(),
-            'within_words': self.within_words_var.get(),
-            'wildcards': self.wildcards_var.get()
+            'within_words': self.within_words_var.get()
         }
         self.config_manager.set('search_settings', search_settings)
         
