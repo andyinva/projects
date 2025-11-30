@@ -1,15 +1,16 @@
 import sys
 import json
 import os
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QGridLayout, QSplitter, QTextEdit, 
-                             QLabel, QComboBox, QLineEdit, QPushButton, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QGridLayout, QSplitter, QTextEdit,
+                             QLabel, QComboBox, QLineEdit, QPushButton,
                              QListWidget, QScrollArea, QFrame, QCheckBox)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 
-# Import existing classes from Tkinter version
+# Import existing classes
 from bible_search import BibleSearch
+from bible_search_service import BibleSearchService, SearchSettings
 
 class ConfigManager:
     """Configuration management for the Bible search application."""
@@ -69,17 +70,25 @@ class ConfigManager:
 class BibleSearchPyQt6(QMainWindow):
     def __init__(self):
         super().__init__()
-        
+
         # Initialize core components
         self.config_manager = ConfigManager()
         self.bible_search = BibleSearch()
-        
+
+        # Initialize search service
+        self.search_service = BibleSearchService()
+
+        # Connect search service signals
+        self.search_service.search_completed.connect(self.on_search_completed)
+        self.search_service.search_failed.connect(self.on_search_failed)
+        self.search_service.search_progress.connect(self.log_message)
+
         # Setup window
         self.setWindowTitle("Bible Search - PyQt6")
         window_width = self.config_manager.get('window_width', 1200)
         window_height = self.config_manager.get('window_height', 800)
         self.setGeometry(100, 100, window_width, window_height)
-        
+
         # Initialize search variables
         self.selected_verses = []
         self.current_subject = None
@@ -360,61 +369,53 @@ class BibleSearchPyQt6(QMainWindow):
         
     # Event handlers and methods
     def perform_search(self):
-        """Handle search button click with real Bible search functionality"""
+        """Handle search button click using BibleSearchService"""
         search_term = self.search_input.currentText().strip()
         if not search_term:
             self.log_message("Please enter search terms")
             return
-            
+
         # Add to search history
         if search_term not in self.search_history:
             self.search_history.insert(0, search_term)
             self.search_history = self.search_history[:10]  # Keep last 10
             self.config_manager.set('search_history', self.search_history)
             self.config_manager.save_config()
-            
+
         self.log_message(f"Searching for: {search_term}")
-        
-        # Get search settings
-        case_sensitive = self.case_sensitive_cb.isChecked()
-        unique_verses = self.unique_verses_cb.isChecked()
-        abbreviate_results = self.abbreviate_results_cb.isChecked()
-        synonyms = self.synonyms_cb.isChecked()
-        
-        # Get selected translations
-        enabled_translations = self.get_enabled_translations()
-        
-        try:
-            # Perform real search using BibleSearch
-            results = self.bible_search.search_verses(
-                query=search_term,
-                enabled_translations=enabled_translations,
-                case_sensitive=case_sensitive,
-                unique_verses=unique_verses,
-                abbreviate_results=abbreviate_results
-            )
-            
-            # Update results list
-            self.results_list.clear()
-            result_strings = []
-            for result in results:
-                if abbreviate_results:
-                    result_str = f"{result.book} {result.chapter}:{result.verse} ({result.translation}) - {result.text[:80]}..."
-                else:
-                    result_str = f"{result.book} {result.chapter}:{result.verse} ({result.translation}) - {result.text}"
-                result_strings.append(result_str)
-                
-            self.results_list.addItems(result_strings)
-            self.results_status_label.setText(f"Found {len(results)} results")
-            
-            if results:
-                self.log_message(f"Search completed: {len(results)} results found")
-            else:
-                self.log_message("No results found")
-                
-        except Exception as e:
-            self.log_message(f"Search error: {str(e)}")
-            print(f"Search error details: {e}")
+
+        # Create search settings
+        settings = SearchSettings()
+        settings.case_sensitive = self.case_sensitive_cb.isChecked()
+        settings.unique_verses = self.unique_verses_cb.isChecked()
+        settings.abbreviate_results = self.abbreviate_results_cb.isChecked()
+        settings.enabled_translations = self.get_enabled_translations()
+
+        # Perform search using the service (runs in background thread)
+        self.search_service.search(search_term, settings)
+
+    def on_search_completed(self, results):
+        """Handle search completion from BibleSearchService"""
+        # Update results list
+        self.results_list.clear()
+        result_strings = []
+
+        for result in results:
+            result_str = f"{result['Reference']} ({result['Translation']}) - {result['Text']}"
+            result_strings.append(result_str)
+
+        self.results_list.addItems(result_strings)
+        self.results_status_label.setText(f"Found {len(results)} results")
+
+        if results:
+            self.log_message(f"Search completed: {len(results)} results found")
+        else:
+            self.log_message("No results found")
+
+    def on_search_failed(self, error_message):
+        """Handle search failure from BibleSearchService"""
+        self.log_message(f"Search error: {error_message}")
+        print(f"Search error details: {error_message}")
         
     def on_result_selected(self, item):
         """Handle selection of search result"""
