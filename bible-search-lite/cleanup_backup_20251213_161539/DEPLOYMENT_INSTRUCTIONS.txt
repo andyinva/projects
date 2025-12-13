@@ -1,0 +1,187 @@
+DEPLOYMENT SCRIPT INSTRUCTIONS
+===============================================================================
+
+QUICK START
+-----------
+
+1. Make the script executable:
+   chmod +x deploy_phase1.sh
+
+2. Run the script:
+   ./deploy_phase1.sh
+
+3. Follow the remaining manual steps in IMPLEMENTATION_GUIDE.txt (Tasks 4-10)
+
+
+WHAT THE SCRIPT DOES
+---------------------
+
+✅ AUTOMATIC (Done by Script):
+   • Creates backup directory with timestamp
+   • Backs up files before modifying
+   • Creates bible_search_ui/services/ directory
+   • Copies user_data_service.py
+   • Copies services/__init__.py
+   • Copies user_data_controller.py
+   • Updates controllers/__init__.py
+   • Appends GroupDialog and SubjectDialog to dialogs.py
+   • Verifies all files copied correctly
+
+⚠️  MANUAL (You Must Do):
+   • Modify bible_search_lite.py imports (Task 5)
+   • Modify bible_search_lite.py __init__ (Task 5)
+   • Modify create_subject_controls() (Task 4)
+   • Add group management methods (Task 6)
+   • Add subject management methods (Task 7)
+   • Modify acquire_verses() (Task 8)
+   • Add on_verses_loaded() (Task 9)
+   • Modify save_config() (Task 10)
+
+
+DETAILED STEPS
+--------------
+
+STEP 1: BACKUP YOUR WORK
+   cd ~/projects/bible-search
+   git add -A
+   git commit -m "Pre-Phase1 checkpoint"
+
+STEP 2: PREPARE THE SCRIPT
+   cd /mnt/user-data/outputs
+   chmod +x deploy_phase1.sh
+
+STEP 3: RUN THE SCRIPT
+   ./deploy_phase1.sh
+
+   Expected output:
+   ========================================
+   Phase 1 Deployment Script
+   ========================================
+   Project Root: /path/to/bible-search
+   Backup Dir: /path/to/backups/phase1_20250109_120000
+
+   ✓ Found bible_search_lite.py
+   
+   ========================================
+   Checking Source Files
+   ========================================
+   ✓ Found: user_data_service.py
+   ✓ Found: user_data_controller.py
+   ✓ Found: services__init__.py
+   ✓ Found: controllers__init__.py
+   ✓ Found: dialogs_additions.py
+   
+   ========================================
+   Creating Backups
+   ========================================
+   ✓ Created backup directory
+   ✓ Backed up: __init__.py
+   ✓ Backed up: dialogs.py
+   ✓ Backed up: bible_search_lite.py
+   
+   [... more output ...]
+   
+   ========================================
+   Deployment Complete
+   ========================================
+
+STEP 4: VERIFY THE RESULTS
+   Check that these files now exist:
+   
+   bible_search_ui/
+   ├── services/
+   │   ├── __init__.py              ✓ NEW
+   │   └── user_data_service.py     ✓ NEW
+   └── controllers/
+       └── user_data_controller.py  ✓ NEW
+
+STEP 5: CONTINUE WITH MANUAL MODIFICATIONS
+   Open IMPLEMENTATION_GUIDE.txt
+   Start with Task 4: "MODIFY bible_search_lite.py - Section 4 UI Controls"
+   Complete Tasks 4-10 in order
+
+
+TROUBLESHOOTING
+---------------
+
+ERROR: "Cannot find bible_search_lite.py"
+SOLUTION: Run the script from the project root directory:
+   cd ~/projects/bible-search
+   /mnt/user-data/outputs/deploy_phase1.sh
+
+ERROR: "Required file not found"
+SOLUTION: Verify all generated files are in /mnt/user-data/outputs/
+   ls -l /mnt/user-data/outputs/
+
+ERROR: "Permission denied"
+SOLUTION: Make the script executable:
+   chmod +x deploy_phase1.sh
+
+ERROR: Script runs but files not copied
+SOLUTION: Check the backup directory for details:
+   ls -la backups/phase1_*/
+
+
+WHAT IF SOMETHING GOES WRONG?
+------------------------------
+
+All modified files are backed up to:
+   ~/projects/bible-search/backups/phase1_YYYYMMDD_HHMMSS/
+
+To restore a backup:
+   cp backups/phase1_YYYYMMDD_HHMMSS/dialogs.py bible_search_ui/ui/dialogs.py
+
+To completely undo the script:
+   rm -rf bible_search_ui/services
+   cp backups/phase1_*/dialogs.py bible_search_ui/ui/dialogs.py
+   cp backups/phase1_*/__init__.py bible_search_ui/controllers/__init__.py
+
+
+AFTER RUNNING THE SCRIPT
+-------------------------
+
+Your project structure will look like:
+
+bible-search/
+├── bible_search_lite.py         (needs manual modification)
+├── bible_search_ui/
+│   ├── services/                 ✓ NEW DIRECTORY
+│   │   ├── __init__.py          ✓ CREATED
+│   │   └── user_data_service.py ✓ CREATED
+│   ├── controllers/
+│   │   ├── __init__.py          ✓ UPDATED
+│   │   ├── search_controller.py (unchanged)
+│   │   └── user_data_controller.py ✓ CREATED
+│   └── ui/
+│       ├── dialogs.py           ✓ UPDATED (dialogs appended)
+│       └── widgets.py           (unchanged)
+└── backups/
+    └── phase1_YYYYMMDD_HHMMSS/  ✓ BACKUP CREATED
+        ├── __init__.py
+        ├── dialogs.py
+        └── bible_search_lite.py
+
+
+ESTIMATED TIME
+--------------
+
+Script execution:  < 1 minute
+Manual tasks 4-10: 4-6 hours
+Testing:           2-3 hours
+---------------
+TOTAL:             6-10 hours
+
+
+READY TO BEGIN?
+---------------
+
+1. ☐ Git commit current state
+2. ☐ chmod +x deploy_phase1.sh
+3. ☐ ./deploy_phase1.sh
+4. ☐ Verify files created
+5. ☐ Open IMPLEMENTATION_GUIDE.txt
+6. ☐ Complete Tasks 4-10
+7. ☐ Test with checklist
+8. ☐ Celebrate! 🎉
+
+===============================================================================

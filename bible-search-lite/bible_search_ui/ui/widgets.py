@@ -112,20 +112,19 @@ class VerseItemWidget(QWidget):
         """)
         self.checkbox.stateChanged.connect(self.on_checkbox_changed)
         layout.addWidget(self.checkbox, alignment=Qt.AlignmentFlag.AlignTop)
-        
-        # Reference label (fixed width for column alignment)
+
+        # Combined reference and text as a single label with word wrap
         ref_text = f"{self.translation} {self.book_abbrev} {self.chapter}:{self.verse_number}"
-        self.reference_label = QLabel(ref_text)
-        self.reference_label.setFixedWidth(110)
-        self.reference_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        layout.addWidget(self.reference_label, alignment=Qt.AlignmentFlag.AlignTop)
-        
-        # Verse text (expandable with word wrap)
-        self.text_label = QLabel(self.text)
+        combined_text = f"{ref_text} - {self.text}"
+        self.text_label = QLabel(combined_text)
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.text_label.setMinimumHeight(20)
         layout.addWidget(self.text_label, stretch=1)
+
+        # Keep reference_label as attribute for compatibility (points to same label)
+        self.reference_label = self.text_label
+        self.reference_text = ref_text
         
         # Make the entire widget clickable for navigation
         self.mousePressEvent = self.on_verse_clicked
@@ -154,17 +153,12 @@ class VerseItemWidget(QWidget):
             }
         """)
         
-        # Style the reference label
-        font = QFont("Arial")
+        # Style the combined text label
+        font = QFont("IBM Plex Mono")
         font.setBold(False)
-        font.setPointSize(9)
-        self.reference_label.setFont(font)
-        self.reference_label.setStyleSheet("color: black;")
-
-        # Style the text label - same size as reference
-        text_font = QFont("Arial")
-        text_font.setPointSize(9)
-        self.text_label.setFont(text_font)
+        font.setPointSizeF(9)  # Use setPointSizeF for fractional sizes
+        self.text_label.setFont(font)
+        self.text_label.setStyleSheet("color: black;")
         
     def on_checkbox_changed(self, state):
         """
@@ -383,14 +377,22 @@ class VerseListWidget(QWidget):
         if verse_id in self.verse_items:
             return  # Verse already exists
 
-        verse_item = VerseItemWidget(verse_id, translation, book_abbrev, chapter, 
+        verse_item = VerseItemWidget(verse_id, translation, book_abbrev, chapter,
                                      verse_number, text, window_id=self.window_id)
         verse_item.selection_changed.connect(self.on_verse_selection_changed)
         verse_item.verse_clicked.connect(self.on_verse_clicked)
-        
+
         # Insert before the stretch at the end
         self.content_layout.insertWidget(self.content_layout.count() - 1, verse_item)
         self.verse_items[verse_id] = verse_item
+
+        # Apply current font size from main window if available
+        if hasattr(self, 'main_window') and self.main_window:
+            verse_size = self.main_window.verse_font_sizes[self.main_window.verse_font_size]
+            font = QFont("IBM Plex Mono")
+            font.setBold(False)
+            font.setPointSizeF(verse_size)  # Use setPointSizeF for fractional sizes
+            verse_item.text_label.setFont(font)
         
     def on_verse_selection_changed(self, verse_id, is_selected):
         """
@@ -583,16 +585,17 @@ class SectionWidget(QFrame):
         >>> section = SectionWidget("2. Search Results", content, controls)
     """
 
-    def __init__(self, title, content_widget, controls_widget=None, 
-                 show_settings=False, main_window=None, parent=None):
+    def __init__(self, title, content_widget, controls_widget=None,
+                 show_settings=False, title_buttons=None, main_window=None, parent=None):
         """
         Initialize a section container.
-        
+
         Args:
             title (str): Section title text (e.g., "2. Search Results")
             content_widget (QWidget): Main content widget for this section
             controls_widget (QWidget, optional): Controls to display above content
             show_settings (bool): If True, displays a settings gear icon
+            title_buttons (list, optional): List of QPushButton widgets to add to title bar
             main_window (QMainWindow, optional): Reference to main window for settings callback
             parent (QWidget, optional): Parent widget
         """
@@ -610,7 +613,7 @@ class SectionWidget(QFrame):
         layout.setContentsMargins(3, 3, 3, 3)
         layout.setSpacing(2)
 
-        # Title row with optional settings gear
+        # Title row with optional buttons
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(5)
@@ -628,6 +631,11 @@ class SectionWidget(QFrame):
         """)
         title_layout.addWidget(title_label)
         title_layout.addStretch()
+
+        # Add custom title buttons if provided
+        if title_buttons:
+            for button in title_buttons:
+                title_layout.addWidget(button)
 
         # Settings gear icon (only for message window)
         if show_settings and main_window:

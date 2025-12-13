@@ -1,0 +1,295 @@
+============================================================
+TaxCut .T03 File Conversion Report
+Source File: Andrew Hopkins's Taxes.T03
+File Size: 18335 bytes
+============================================================
+
+PERSONAL INFORMATION:
+-------------------------
+  SSN: 226-86-3809
+  SSN: 474-62-5298
+  Phone: 703-719-0485
+  Name: Accrued
+  Name: Exmpt
+  Name: Fm 4835
+  Name: Form Copy Deleted
+  Name: From K-1
+  Name: Hopkins
+  Name: K-1 Wks
+  Name: Linda
+  Name: N/A
+  Name: Network Admin
+  Name: Nominee
+  Name: Other
+  Name: Others
+  Name: Rentals
+  Name: Savings
+  Name: Sched C
+  Name: Sched F
+  Name: Treas
+  Name: Upper Marlboro
+  Name: Virginia
+  Name: Yes
+
+ADDRESSES:
+----------
+  Address: 6430 General Green Way
+  Address: 6640 Greenleigh Lane
+  Address: ABP ADJUSTMENT
+  Address: ACCRUED INTEREST
+  Address: Adjustments - worksheet attached
+  Address: Alexandria
+  Address: Andrew
+  Address: DIVIDENDS ON RESTRICTED STOCK
+  Address: K-1 Est
+  Address: Last Year's Data File - G:\A&L\Linda\TaxCut02\Program\TaxData\Hopkins2002.T02
+  Address: NOMINEE DISTRIBUTION
+  Address: OID ADJUSTMENT
+  Address: OTHER ADJUSTMENT
+  Address: Restr
+  Address: SAVINGS BOND ADJUSTMENT
+  Address: TAX-EXEMPT INTEREST
+  Address: Taxable K-1 interest
+  Address: string:CURRENT_TOPIC_PATH=/Welcome;1/LoadLastYear;1#LLYReviewInfo&0
+  Address: string:TOPIC_PATH_Welcome=/Welcome;1/LoadLastYear;1#LLYReviewInfo&0
+  Address: string:ui_memo=
+  Address: int:ui_prop_file_instance=1
+  Address: int:ui_prop_file_start_state=1
+  Address: string:ui_prop_guid=44BE1CA0441911d7AB3D00609707B9E8
+  Address: int:ui_prop_import_status=1
+  Address: int:ui_prop_interview_instance=0
+  Address: int:ui_prop_interview_start_state=1
+  Address: int:ui_prop_interview_status_field_id=939
+  Address: int:ui_prop_interview_status_form_id=92
+  Address: int:ui_prop_last_active_tab=5501
+  Address: int:ui_prop_last_state_tab_return_type=1
+  Address: int:ui_prop_lly_status=3
+  Address: int:ui_prop_plan_instance=1
+  Address: int:ui_prop_plan_start_state=1
+  Address: int:ui_prop_start_state_tab_screen=0
+  Address: Last Year's User File
+
+DATES:
+------
+  Date: 09/19/1953
+  Date: 10/20/1953
+
+MONETARY AMOUNTS WITH CONTEXT:
+-------------------------------
+  Amount: $157
+  Amount: $3.95
+  Amount: $2,011
+  Amount: $23.99
+  Amount: $195.87
+  Amount: $537.44
+  Amount: $599.75
+  Amount: $837.41
+  Amount: $1,091.45
+  Amount: $1,931.37
+  Amount: $2,564.75
+  Amount: $3,286.95
+  Amount: $3,634.75
+  Amount: $4,274.36
+  Amount: $13,506.92
+  Amount: $41,365.53
+
+DETAILED AMOUNTS (with byte positions and context):
+----------------------------------------------------
+   1. Amount: $157          (Byte:    43)
+      Context: 3.95, 2,011
+
+   2. Amount: $3.95         (Byte:    64)
+      Form/Line: 157
+      Context: 157, 2,011, 23.99
+
+   3. Amount: $2,011        (Byte:    85)
+      Form/Line: 157
+      Context: 157, 3.95, 23.99
+
+   4. Amount: $23.99        (Byte:   106)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+   5. Amount: $195.87       (Byte:   127)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+   6. Amount: $537.44       (Byte:   148)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+   7. Amount: $599.75       (Byte:   169)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+   8. Amount: $837.41       (Byte:   190)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+   9. Amount: $1,091.45     (Byte:   211)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+  10. Amount: $1,931.37     (Byte:   232)
+      Form/Line: 157
+      Context: 157, 3.95, 2,011
+
+  11. Amount: $2,564.75     (Byte:   253)
+      Context: 3.95, 2,011
+
+  12. Amount: $3,286.95     (Byte:   274)
+      Context: 2,011, 23.99
+
+  13. Amount: $3,634.75     (Byte:   295)
+      Context: 23.99, 195.87
+
+  14. Amount: $4,274.36     (Byte:   316)
+      Context: 195.87, 537.44
+
+  15. Amount: $13,506.92    (Byte:   337)
+      Context: 537.44, 599.75
+
+  16. Amount: $41,365.53    (Byte:   376)
+      Context: .75, 837.41
+
+  17. Amount: $0            (Byte:  1734)
+      Form/Line: Form Copy Deleted, Last Year's Data File - G:\A&L\Linda\TaxCut02\Program\TaxData\Hopkins2002.T02
+      Context: Form Copy Deleted, Last Year's Data File - G:\A&L\Linda\TaxCut02\Program\TaxData\Hopkins2002.T02, Fm 4835, From K-1
+
+
+SUMMARY BY FORM LINE:
+--------------------
+  Line 157: $3.95, $2,011, $23.99, $195.87, $537.44, $599.75, $837.41, $1,091.45, $1,931.37 - [Unknown line - possibly from Schedule or other form] (9 amounts)
+
+FORM INFORMATION:
+----------------
+  Form Info: See attached worksheet(s) for detail.
+  Form Info: See worksheet attached.
+  Form Info: You need to send in a form or document with your Form 8453-OL.
+  Form Info: int:ui_prop_form_copy=1
+  Form Info: int:ui_prop_forms_with_data=0
+  Form Info: int:ui_prop_show_hide_interview_form=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+  Form Info: int:formprop_import_source=1
+
+OTHER DATA:
+-----------
+  000000
+  000001
+  000005191327
+  0010840740
+  001383584-5
+  051000017
+  081288
+  081292
+  125DB
+  150DB
+  175DB
+  200DB
+  20772
+  22312
+  22315-3652
+  4053
+  44BE1CA0441911d7AB3D00609707B9E8
+  52-1544913
+  54-0639682
+  81293
+  8431 Old Marlboro Pike, #201
+  ABP
+  ALT MIN TAX
+  Bank of America
+  DLXC
+  John E. Kelly & Sons Electric 0
+  National Capital Federal CU
+  OID
+  Ordinary dividends from K-1's
+  PLTC
+  PRE
+  Plate maker
+  SYD
+  See attached.
+  Weadon Printing Services Inc
+  XXXX
+  XXXXXX
+  XXXXXXXX
+  XXXXXXXXX
+  XXXXXXXXXXXXXXX
+  XXXXXXXXXXXXXXXXX
+  int:ui_prop_error_check_errors=-1
+  int:ui_prop_error_check_invoked=0
+  int:ui_prop_file_efile_error_msgs=-1
+  int:ui_prop_file_efile_warning_msgs=-1
+  int:ui_prop_file_return_type=1
+  int:ui_prop_file_topic_id=1
+  int:ui_prop_interview_topic_id=1
+  int:ui_prop_plan_topic_id=1
+  int:ui_prop_xira_version=1
+
+RAW EXTRACTED STRINGS:
+----------------------
+   1. 157
+   2. 3.95
+   3. 2,011
+   4. 23.99
+   5. 195.87
+   6. 537.44
+   7. 599.75
+   8. 837.41
+   9. 1,091.45
+  10. 1,931.37
+  11. 2,564.75
+  12. 3,286.95
+  13. 3,634.75
+  14. 4,274.36
+  15. 13,506.92
+  16. 41,365.53
+  17. 000000
+  18. 000001
+  19. 000005191327
+  20. 0010840740
+  21. 001383584-5
+  22. 051000017
+  23. 081288
+  24. 081292
+  25. 09/19/1953
+  26. 10/20/1953
+  27. 125DB
+  28. 150DB
+  29. 175DB
+  30. 200DB
+  31. 20772
+  32. 22312
+  33. 22315-3652
+  34. 226-86-3809
+  35. 4053
+  36. 44BE1CA0441911d7AB3D00609707B9E8
+  37. 474-62-5298
+  38. 52-1544913
+  39. 54-0639682
+  40. 6430 General Green Way
+  41. 6640 Greenleigh Lane
+  42. 703-719-0485
+  43. 81293
+  44. 8431 Old Marlboro Pike, #201
+  45. ABP
+  46. ABP ADJUSTMENT
+  47. ACCRUED INTEREST
+  48. ALT MIN TAX
+  49. Accrued
+  50. Adjustments - worksheet attached
+  ... and 100 more strings

@@ -1,0 +1,10 @@
+# Network Bridge Test Tool Requirements
+# Python 3.7+
+
+# Note: tkinter comes with Python standard library
+# No additional packages required for basic functionality
+
+# Optional packages for future enhancements:
+# matplotlib>=3.7.0  # For generating graphs
+# numpy>=1.24.0      # For advanced statistics
+# pandas>=2.0.0      # For data analysis

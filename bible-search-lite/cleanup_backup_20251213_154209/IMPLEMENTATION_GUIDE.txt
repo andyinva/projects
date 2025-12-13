@@ -1,0 +1,652 @@
+"""
+PHASE 1 IMPLEMENTATION GUIDE
+Bible Search Lite - Groups and Subjects Feature
+
+This guide provides step-by-step instructions for implementing Phase 1.
+Follow each task in order, testing after each step.
+
+===============================================================================
+FILE PLACEMENT
+===============================================================================
+
+1. Create new directory structure:
+   bible_search_ui/
+   └── services/
+       ├── __init__.py (from outputs/services__init__.py)
+       └── user_data_service.py (from outputs/user_data_service.py)
+
+2. Add to existing controllers directory:
+   bible_search_ui/
+   └── controllers/
+       ├── __init__.py (replace with outputs/controllers__init__.py)
+       └── user_data_controller.py (from outputs/user_data_controller.py)
+
+3. Modify existing dialogs.py:
+   bible_search_ui/
+   └── ui/
+       └── dialogs.py (append content from outputs/dialogs_additions.py)
+
+===============================================================================
+TASK 4: MODIFY bible_search_lite.py - Section 4 UI Controls
+===============================================================================
+
+Location: bible_search_lite.py, method create_subject_controls() around line 600
+
+CURRENT CODE:
+```python
+def create_subject_controls(self):
+    """Create subject controls"""
+    controls_widget = QWidget()
+    layout = QHBoxLayout(controls_widget)
+    layout.setContentsMargins(0, 0, 0, 0)
+    
+    acquire_button = QPushButton("Acquire")
+    acquire_button.clicked.connect(self.acquire_verses)
+    
+    clear_button = QPushButton("Clear")
+    clear_button.clicked.connect(lambda: self.verse_lists['subject'].clear_verses())
+    
+    layout.addWidget(acquire_button)
+    layout.addWidget(clear_button)
+    layout.addStretch()
+    
+    # Context-sensitive buttons
+    clip_button = QPushButton("Copy")
+    clip_button.clicked.connect(self.copy_selected_verses)
+    export_button = QPushButton("Export")
+    export_button.clicked.connect(self.export_selected_verses)
+    
+    layout.addWidget(clip_button)
+    layout.addWidget(export_button)
+    
+    return controls_widget
+```
+
+REPLACE WITH:
+```python
+def create_subject_controls(self):
+    """Create subject controls with group and subject management"""
+    controls_widget = QWidget()
+    main_layout = QVBoxLayout(controls_widget)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setSpacing(5)
+    
+    # Row 1: Group management
+    group_layout = QHBoxLayout()
+    group_layout.addWidget(QLabel("Group:"))
+    
+    self.group_combo = QComboBox()
+    self.group_combo.setMinimumWidth(200)
+    self.group_combo.setStyleSheet(self.get_combobox_style())
+    self.group_combo.currentIndexChanged.connect(self.on_group_selected)
+    group_layout.addWidget(self.group_combo)
+    
+    new_group_button = QPushButton("New Group")
+    new_group_button.clicked.connect(self.create_new_group)
+    new_group_button.setStyleSheet(self.get_button_style())
+    group_layout.addWidget(new_group_button)
+    
+    delete_group_button = QPushButton("Delete Group")
+    delete_group_button.clicked.connect(self.delete_group)
+    delete_group_button.setStyleSheet(self.get_button_style())
+    group_layout.addWidget(delete_group_button)
+    
+    group_layout.addStretch()
+    main_layout.addLayout(group_layout)
+    
+    # Row 2: Subject management
+    subject_layout = QHBoxLayout()
+    subject_layout.addWidget(QLabel("Subject:"))
+    
+    self.subject_combo = QComboBox()
+    self.subject_combo.setMinimumWidth(200)
+    self.subject_combo.setStyleSheet(self.get_combobox_style())
+    self.subject_combo.currentIndexChanged.connect(self.on_subject_selected)
+    subject_layout.addWidget(self.subject_combo)
+    
+    new_subject_button = QPushButton("New Subject")
+    new_subject_button.clicked.connect(self.create_new_subject)
+    new_subject_button.setStyleSheet(self.get_button_style())
+    subject_layout.addWidget(new_subject_button)
+    
+    delete_subject_button = QPushButton("Delete Subject")
+    delete_subject_button.clicked.connect(self.delete_subject)
+    delete_subject_button.setStyleSheet(self.get_button_style())
+    subject_layout.addWidget(delete_subject_button)
+    
+    find_button = QPushButton("Find")
+    find_button.clicked.connect(self.find_subject)
+    find_button.setStyleSheet(self.get_button_style())
+    subject_layout.addWidget(find_button)
+    
+    subject_layout.addStretch()
+    main_layout.addLayout(subject_layout)
+    
+    # Row 3: Verse operations (existing buttons)
+    verse_layout = QHBoxLayout()
+    
+    self.acquire_button = QPushButton("Acquire")
+    self.acquire_button.clicked.connect(self.acquire_verses)
+    self.acquire_button.setStyleSheet(self.get_button_style())
+    verse_layout.addWidget(self.acquire_button)
+    
+    clear_button = QPushButton("Clear")
+    clear_button.clicked.connect(lambda: self.verse_lists['subject'].clear_verses())
+    clear_button.setStyleSheet(self.get_button_style())
+    verse_layout.addWidget(clear_button)
+    
+    verse_layout.addStretch()
+    
+    # Right side buttons
+    tips_button = QPushButton("Tips")
+    tips_button.setStyleSheet(self.get_button_style())
+    verse_layout.addWidget(tips_button)
+    
+    clip_button = QPushButton("Copy")
+    clip_button.clicked.connect(self.copy_selected_verses)
+    clip_button.setStyleSheet(self.get_button_style())
+    verse_layout.addWidget(clip_button)
+    
+    export_button = QPushButton("Export")
+    export_button.clicked.connect(self.export_selected_verses)
+    export_button.setStyleSheet(self.get_button_style())
+    verse_layout.addWidget(export_button)
+    
+    main_layout.addLayout(verse_layout)
+    
+    return controls_widget
+```
+
+===============================================================================
+TASK 5: MODIFY bible_search_lite.py - Import and Initialize Controller
+===============================================================================
+
+Location 1: Top of file (around line 10-20)
+
+ADD THESE IMPORTS:
+```python
+# After existing imports, add:
+from bible_search_ui.services import UserDataService
+from bible_search_ui.controllers import UserDataController
+from bible_search_ui.ui.dialogs import GroupDialog, SubjectDialog
+```
+
+Location 2: In __init__ method (around line 50-80)
+
+AFTER:
+```python
+self.search_controller = SearchController()
+```
+
+ADD:
+```python
+# Initialize user data service and controller
+self.user_data_service = UserDataService("user_data.db")
+self.user_data_controller = UserDataController(self.user_data_service)
+
+# Connect user data controller signals
+self.user_data_controller.groups_loaded.connect(self.on_groups_loaded)
+self.user_data_controller.subjects_loaded.connect(self.on_subjects_loaded)
+self.user_data_controller.verses_loaded.connect(self.on_verses_loaded)
+self.user_data_controller.operation_success.connect(
+    lambda msg: self.message_label.setText(msg)
+)
+self.user_data_controller.operation_failed.connect(
+    lambda msg: self.message_label.setText(f"Error: {msg}")
+)
+```
+
+Location 3: End of __init__ method, AFTER load_config() call
+
+ADD:
+```python
+# Load initial user data
+self.user_data_controller.load_groups()
+
+# Restore last selected group/subject from config if available
+if config and 'user_data' in config:
+    user_data_config = config['user_data']
+    if 'current_group_id' in user_data_config:
+        # Will be restored after groups are loaded
+        self.pending_group_id = user_data_config['current_group_id']
+        self.pending_subject_id = user_data_config.get('current_subject_id')
+    else:
+        self.pending_group_id = None
+        self.pending_subject_id = None
+else:
+    self.pending_group_id = None
+    self.pending_subject_id = None
+```
+
+===============================================================================
+TASK 6: ADD Group Management Methods to bible_search_lite.py
+===============================================================================
+
+Location: Add these methods to BibleSearchProgram class (around line 700)
+
+```python
+# ==================== GROUP MANAGEMENT ====================
+
+def on_groups_loaded(self, groups):
+    """
+    Handle groups loaded signal from controller.
+    
+    Args:
+        groups (list): List of group dictionaries from database
+        
+    Side Effects:
+        - Populates group dropdown
+        - Restores previous selection if available
+        - Clears subject dropdown until group selected
+    """
+    # Clear and populate group dropdown
+    self.group_combo.clear()
+    
+    for group in groups:
+        # Store group_id as user data
+        self.group_combo.addItem(group['group_name'], group['group_id'])
+    
+    # Restore previous selection if available
+    if hasattr(self, 'pending_group_id') and self.pending_group_id is not None:
+        # Find index of pending group
+        for i in range(self.group_combo.count()):
+            if self.group_combo.itemData(i) == self.pending_group_id:
+                self.group_combo.setCurrentIndex(i)
+                break
+        
+        self.pending_group_id = None  # Clear pending selection
+
+def on_group_selected(self, index):
+    """
+    Handle group selection from dropdown.
+    
+    Args:
+        index (int): Index of selected item in dropdown
+        
+    Side Effects:
+        - Loads subjects for selected group via controller
+        - Clears subject verses display
+    """
+    if index < 0:
+        return
+        
+    group_id = self.group_combo.itemData(index)
+    if group_id is not None:
+        self.user_data_controller.select_group(group_id)
+        # Clear verses display since group changed
+        self.verse_lists['subject'].clear_verses()
+
+def create_new_group(self):
+    """
+    Show dialog to create a new group.
+    
+    Side Effects:
+        - Shows GroupDialog modal window
+        - Creates group via controller if user accepts
+    """
+    from bible_search_ui.ui.dialogs import GroupDialog
+    
+    dialog = GroupDialog(self, mode="create")
+    if dialog.exec():
+        name, description = dialog.get_values()
+        self.user_data_controller.create_group(name, description)
+
+def delete_group(self):
+    """
+    Delete the currently selected group after confirmation.
+    
+    Side Effects:
+        - Shows confirmation dialog
+        - Deletes group via controller if confirmed
+    """
+    current_index = self.group_combo.currentIndex()
+    if current_index < 0:
+        self.message_label.setText("No group selected")
+        return
+    
+    group_name = self.group_combo.currentText()
+    group_id = self.group_combo.itemData(current_index)
+    
+    from PyQt6.QtWidgets import QMessageBox
+    reply = QMessageBox.question(
+        self,
+        "Confirm Deletion",
+        f"Delete group '{group_name}' and all its subjects and verses?\n\nThis cannot be undone.",
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No
+    )
+    
+    if reply == QMessageBox.StandardButton.Yes:
+        self.user_data_controller.delete_group(group_id)
+```
+
+===============================================================================
+TASK 7: ADD Subject Management Methods to bible_search_lite.py
+===============================================================================
+
+Location: Add these methods after group management methods
+
+```python
+# ==================== SUBJECT MANAGEMENT ====================
+
+def on_subjects_loaded(self, subjects):
+    """
+    Handle subjects loaded signal from controller.
+    
+    Args:
+        subjects (list): List of subject dictionaries for current group
+        
+    Side Effects:
+        - Populates subject dropdown
+        - Restores previous selection if available
+        - Clears verse display until subject selected
+    """
+    # Clear and populate subject dropdown
+    self.subject_combo.clear()
+    
+    for subject in subjects:
+        # Store subject_id as user data
+        self.subject_combo.addItem(subject['subject_name'], subject['subject_id'])
+    
+    # Restore previous selection if available
+    if hasattr(self, 'pending_subject_id') and self.pending_subject_id is not None:
+        # Find index of pending subject
+        for i in range(self.subject_combo.count()):
+            if self.subject_combo.itemData(i) == self.pending_subject_id:
+                self.subject_combo.setCurrentIndex(i)
+                break
+        
+        self.pending_subject_id = None  # Clear pending selection
+
+def on_subject_selected(self, index):
+    """
+    Handle subject selection from dropdown.
+    
+    Args:
+        index (int): Index of selected item in dropdown
+        
+    Side Effects:
+        - Loads verses for selected subject via controller
+    """
+    if index < 0:
+        return
+        
+    subject_id = self.subject_combo.itemData(index)
+    if subject_id is not None:
+        self.user_data_controller.select_subject(subject_id)
+
+def create_new_subject(self):
+    """
+    Show dialog to create a new subject.
+    
+    Side Effects:
+        - Shows SubjectDialog modal window
+        - Creates subject via controller if user accepts
+        - Shows error if no group selected
+    """
+    if not self.user_data_controller.current_group_id:
+        self.message_label.setText("Please select a group first")
+        return
+    
+    from bible_search_ui.ui.dialogs import SubjectDialog
+    
+    dialog = SubjectDialog(self, mode="create")
+    if dialog.exec():
+        name, description = dialog.get_values()
+        self.user_data_controller.create_subject(name, description)
+
+def delete_subject(self):
+    """
+    Delete the currently selected subject after confirmation.
+    
+    Side Effects:
+        - Shows confirmation dialog
+        - Deletes subject via controller if confirmed
+    """
+    current_index = self.subject_combo.currentIndex()
+    if current_index < 0:
+        self.message_label.setText("No subject selected")
+        return
+    
+    subject_name = self.subject_combo.currentText()
+    subject_id = self.subject_combo.itemData(current_index)
+    
+    from PyQt6.QtWidgets import QMessageBox
+    reply = QMessageBox.question(
+        self,
+        "Confirm Deletion",
+        f"Delete subject '{subject_name}' and all its verses?\n\nThis cannot be undone.",
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No
+    )
+    
+    if reply == QMessageBox.StandardButton.Yes:
+        self.user_data_controller.delete_subject(subject_id)
+
+def find_subject(self):
+    """
+    Show subject search dialog (Phase 1: placeholder).
+    
+    Side Effects:
+        - Shows message about future implementation
+    """
+    self.message_label.setText("Subject search - coming in future update")
+```
+
+===============================================================================
+TASK 8: MODIFY acquire_verses Method in bible_search_lite.py
+===============================================================================
+
+Location: Find existing acquire_verses method (around line 500)
+
+REPLACE ENTIRE METHOD WITH:
+```python
+def acquire_verses(self):
+    """
+    Move selected verses from active window to current subject.
+    
+    Validates that:
+    - A group is selected
+    - A subject is selected
+    - Active window has selections
+    - Active window is not 'subject' (can't acquire from itself)
+    
+    Side Effects:
+        - Adds verses to current subject via controller
+        - Clears selections in source window
+        - Shows error messages for invalid states
+    """
+    # Validate group and subject are selected
+    if not self.user_data_controller.has_group_and_subject_selected():
+        self.message_label.setText("Please select both a group and subject first")
+        return
+    
+    # Get active window
+    active_window = self.selection_manager.active_window
+    if not active_window:
+        self.message_label.setText("No window is active")
+        return
+    
+    # Can't acquire from subject window to itself
+    if active_window == 'subject':
+        self.message_label.setText("Cannot acquire from subject window")
+        return
+    
+    # Get selected verses from active window
+    selected_verse_ids = self.verse_lists[active_window].get_selected_verses()
+    if not selected_verse_ids:
+        self.message_label.setText("No verses selected in active window")
+        return
+    
+    # Build verse data list for controller
+    verse_data_list = []
+    source_widget = self.verse_lists[active_window]
+    
+    for verse_id in selected_verse_ids:
+        if verse_id in source_widget.verse_items:
+            verse_item = source_widget.verse_items[verse_id]
+            
+            # Build verse reference (e.g., "Gen 1:1")
+            reference = f"{verse_item.book_abbrev} {verse_item.chapter}:{verse_item.verse_number}"
+            
+            verse_data_list.append({
+                'reference': reference,
+                'translation': verse_item.translation,
+                'text': verse_item.text
+            })
+    
+    # Acquire verses via controller
+    self.user_data_controller.acquire_verses(verse_data_list)
+    
+    # Clear selections from source window after successful acquire
+    source_widget.select_none()
+    
+    # Update acquire button state
+    self.update_acquire_button_state()
+```
+
+===============================================================================
+TASK 9: ADD Verse Display Method to bible_search_lite.py
+===============================================================================
+
+Location: Add this method after acquire_verses method
+
+```python
+def on_verses_loaded(self, verses):
+    """
+    Handle verses loaded signal from controller.
+    
+    Args:
+        verses (list): List of verse dictionaries for current subject
+        
+    Side Effects:
+        - Clears and populates subject verses window
+        - Updates message with verse count
+    """
+    # Clear existing verses
+    self.verse_lists['subject'].clear_verses()
+    
+    # Add verses to subject window
+    for verse in verses:
+        # Parse verse reference to get book, chapter, verse
+        reference = verse['verse_reference']  # e.g., "Gen 1:1"
+        parts = reference.split()
+        
+        if len(parts) >= 2:
+            # Handle books with numbers (e.g., "1 Samuel")
+            if parts[0].isdigit():
+                book_abbrev = f"{parts[0]}{parts[1][:3]}"
+                chapter_verse = parts[2] if len(parts) > 2 else ""
+            else:
+                book_abbrev = parts[0][:3]
+                chapter_verse = parts[1] if len(parts) > 1 else ""
+            
+            # Parse chapter:verse
+            if ':' in chapter_verse:
+                chapter, verse_num = chapter_verse.split(':', 1)
+                chapter = int(chapter)
+                verse_num = int(verse_num)
+            else:
+                chapter = 1
+                verse_num = 1
+        else:
+            book_abbrev = "Unk"
+            chapter = 1
+            verse_num = 1
+        
+        # Create unique verse ID
+        verse_id = f"subject_{verse['id']}"
+        
+        # Add to verse list
+        self.verse_lists['subject'].add_verse(
+            verse_id,
+            verse['translation'],
+            book_abbrev,
+            chapter,
+            verse_num,
+            verse['verse_text']
+        )
+    
+    # Update message
+    count = len(verses)
+    if count > 0:
+        self.message_label.setText(f"Loaded {count} verse{'s' if count != 1 else ''}")
+```
+
+===============================================================================
+TASK 10: MODIFY save_config and load_config Methods
+===============================================================================
+
+Location 1: Find save_config method (around line 800)
+
+AFTER the existing config building (before save call), ADD:
+```python
+# Add user data selections
+config['user_data'] = {
+    'current_group_id': self.user_data_controller.get_current_group_id(),
+    'current_subject_id': self.user_data_controller.get_current_subject_id()
+}
+```
+
+Location 2: Already handled in Task 5 (restore selections in __init__)
+
+===============================================================================
+TESTING CHECKLIST
+===============================================================================
+
+After implementing all changes, test in this order:
+
+[ ] 1. Application starts without errors
+[ ] 2. Section 4 shows three rows of controls
+[ ] 3. Group dropdown shows "New Testament" and "Old Testament"
+[ ] 4. Can create new group
+[ ] 5. Can delete group (with confirmation)
+[ ] 6. Selecting group loads its subjects
+[ ] 7. Subject dropdown shows subjects (Faith, Prayer, Love, etc.)
+[ ] 8. Can create new subject in selected group
+[ ] 9. Can delete subject (with confirmation)
+[ ] 10. Same subject name works in different groups
+[ ] 11. Search for verses in Section 2
+[ ] 12. Click verse to load context in Section 3
+[ ] 13. Check verses in Section 2 or 3
+[ ] 14. Acquire button highlights in green
+[ ] 15. Click Acquire - verses appear in Section 4
+[ ] 16. Selections clear after acquire
+[ ] 17. Duplicate verses are skipped with message
+[ ] 18. Close and restart app
+[ ] 19. Group/subject selections are restored
+[ ] 20. Verses still present in subject
+
+===============================================================================
+TROUBLESHOOTING
+===============================================================================
+
+PROBLEM: Import errors for UserDataService or UserDataController
+SOLUTION: Ensure services/ directory has __init__.py file and is in correct location
+
+PROBLEM: Dialog imports fail
+SOLUTION: Append dialogs_additions.py content to existing dialogs.py file
+
+PROBLEM: Database file not created
+SOLUTION: Check that user_data_service.py is imported and UserDataService() is instantiated
+
+PROBLEM: Acquire button not highlighting
+SOLUTION: Verify update_acquire_button_state() is being called when selections change
+
+PROBLEM: Dropdown shows items but data() is None
+SOLUTION: Ensure addItem() calls include second parameter for user data (group_id, subject_id)
+
+PROBLEM: Config not saving user data selections
+SOLUTION: Verify save_config() modification includes 'user_data' dictionary
+
+===============================================================================
+COMPLETION
+===============================================================================
+
+When all tasks are complete and all tests pass:
+1. Commit changes to git with message: "Phase 1: Groups and Subjects implementation"
+2. Update README.md with new features
+3. Consider Phase 2 features (comments system)
+
+===============================================================================
+"""

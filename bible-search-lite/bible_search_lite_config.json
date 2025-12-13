@@ -18,10 +18,14 @@
   "checkboxes": {
     "case_sensitive": false,
     "unique_verse": false,
-    "abbreviate_results": true
+    "abbreviate_results": false
   },
   "font_settings": {
-    "title_font_size": 0,
-    "verse_font_size": 1
+    "title_font_size": 2,
+    "verse_font_size": 3
+  },
+  "user_data": {
+    "current_group_id": 1,
+    "current_subject_id": 1
   }
 }

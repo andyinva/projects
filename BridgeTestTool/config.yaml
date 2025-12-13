@@ -1,0 +1,59 @@
+# Network Bridge Test Tool Configuration
+
+# Server Configuration
+server:
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 5000
+  buffer_size: 65536
+  timeout: 30
+
+# Client Configuration
+client:
+  default_host: "192.168.1.100"  # Change to your server IP
+  port: 5000
+  retry_attempts: 3
+  retry_delay: 5
+  default_duration: 10  # seconds
+  default_packet_size: 8192  # bytes
+
+# Database Configuration
+database:
+  filename: "bridge_test.db"
+  auto_backup: false
+  backup_interval: 3600  # seconds
+
+# Test Profiles
+profiles:
+  quick:
+    duration: 10
+    packet_size: 1500
+    description: "Quick diagnostic test"
+
+  standard:
+    duration: 30
+    packet_size: 8192
+    description: "Standard throughput test"
+
+  extended:
+    duration: 300
+    packet_size: 8192
+    description: "Extended stability test"
+
+  stress:
+    duration: 600
+    packet_size: 16384
+    description: "Stress test with large packets"
+
+# Diagnostic Thresholds
+thresholds:
+  asymmetry_ratio: 2.0  # Flag if upload/download ratio exceeds this
+  min_acceptable_speed: 50.0  # Mbps
+  max_acceptable_latency: 10.0  # ms
+  max_acceptable_loss: 1.0  # percent
+
+# Logging Configuration
+logging:
+  console_refresh_rate: 1.0  # seconds
+  verbose: false
+  save_logs: true
+  log_file: "bridge_test.log"

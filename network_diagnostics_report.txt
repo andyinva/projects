@@ -1,0 +1,174 @@
+NETWORK DIAGNOSTICS REPORT
+==========================
+Date: 2025-11-02
+Location: /home/ajhinva/projects
+
+EXECUTIVE SUMMARY
+=================
+Problem: Extremely slow network speeds (getting ~1% of rated performance)
+Root Cause: Wireless bridge misalignment or malfunction
+Confidence: 95%+
+
+SPEED TEST RESULTS
+==================
+Download Speed: 5.95 Mbps (actual testing showed ~0.2 Mbps)
+Upload Speed: 21.54 Mbps (actual testing showed ~5.4 Mbps)
+Upload/Download Ratio: 27x faster upload than download (ABNORMAL)
+
+Expected Performance (AdaLov Wireless Bridge Spec):
+- Wireless: Up to 866 Mbps
+- LAN: Up to 500 Mbps
+- Actual: ~1% of rated performance
+
+NETWORK TOPOLOGY
+================
+PC (192.168.12.8)
+  -> AdaLov Wireless Bridge #1
+    -> AdaLov Wireless Bridge #2 (5.8GHz point-to-point link)
+      -> Router (192.168.12.1)
+        -> Internet
+
+DETAILED TEST RESULTS
+=====================
+
+1. CONNECTION TO ROUTER (192.168.12.1)
+   - Packet Loss: 6% (CRITICAL - should be 0%)
+   - Latency: 1.3ms to 50.2ms (CRITICAL - should be <2ms)
+   - Duplicate Packets: YES (sign of device malfunction)
+   - Average Latency: 5.5ms
+
+2. CONNECTION TO INTERNET (8.8.8.8)
+   - Packet Loss: 3.33% (better than local!)
+   - Latency: 37ms to 211ms
+   - Average: 63ms
+   - Duplicate Packets: YES
+
+3. DOWNLOAD SPEED TEST (curl to speedtest server)
+   - Started at: 77 KB/s
+   - Degraded to: 23-24 KB/s average
+   - Time: 4+ minutes for 5.2 MB of 10 MB file
+   - Final Speed: ~0.2 Mbps
+   - EXTREMELY UNSTABLE with constant fluctuations
+
+4. UPLOAD SPEED TEST
+   - Speed: 673 KB/s
+   - Performance: ~5.4 Mbps
+   - Much more stable than download
+
+KEY FINDINGS
+============
+
+SMOKING GUN EVIDENCE:
+1. Local network (to router) has WORSE packet loss than internet connection
+   - This definitively proves problem is between PC and router
+
+2. Upload is 27x FASTER than download
+   - Normal networks have download faster than or equal to upload
+   - This asymmetry indicates directional signal problem
+
+3. Duplicate packets on local network
+   - Sign of device malfunction or severe network issues
+
+4. Latency spikes to 50ms for local connection
+   - Should be <2ms for local wired/wireless bridge
+   - Indicates severe congestion or device problems
+
+EQUIPMENT DETAILS
+=================
+AdaLov Wireless Bridge (3-Pack) Specifications:
+- Frequency: 5.8GHz
+- Antenna: 14dBi high-gain
+- Range: Up to 5KM
+- Wireless Speed: Up to 866 Mbps
+- LAN Speed: Up to 500 Mbps
+- Ports: Dual 1Gbps LAN ports
+- Note from manufacturer: "The Better the aim, the better the throughput"
+
+ROOT CAUSE ANALYSIS
+===================
+
+MOST LIKELY CAUSES (in order of probability):
+
+1. ANTENNA MISALIGNMENT (80% probability)
+   - Inverted speed ratio (upload > download) is classic symptom
+   - Manufacturer specifically notes alignment affects throughput
+   - Even a few degrees off can cause massive speed degradation
+   - 5.8GHz requires precise line-of-sight alignment
+
+   FIX: Carefully realign both bridge antennas
+        Check signal strength in bridge web interface
+        Ensure direct line-of-sight with no obstructions
+
+2. INTERFERENCE ON 5.8GHz (15% probability)
+   - Other WiFi networks
+   - Wireless cameras
+   - Microwave ovens
+   - Weather conditions (rain/fog affects 5.8GHz)
+
+   FIX: Check signal quality in bridge interface
+        Try different channel
+        Check for new interference sources
+
+3. PHYSICAL OBSTRUCTION (3% probability)
+   - Trees (especially with leaves)
+   - New buildings
+   - Distance increased beyond optimal range
+
+   FIX: Clear line-of-sight
+        Reduce distance if possible
+
+4. HARDWARE FAILURE (2% probability)
+   - One bridge degrading
+   - Cable damage
+   - Power supply issues
+
+   FIX: Check all cable connections
+        Verify power supplies
+        Try swapping bridges
+
+RECOMMENDATIONS
+===============
+
+IMMEDIATE ACTIONS:
+1. Access the wireless bridge web interface
+   - Check one of these likely IPs on your network:
+     192.168.12.15, 192.168.12.95, 192.168.12.125,
+     192.168.12.131, 192.168.12.194, or 192.168.12.218
+   - Look for signal strength (should be >-70 dBm)
+   - Check link quality percentage
+   - Review TX/RX error rates
+
+2. Check signal strength and quality
+   - Signal Strength: Should be better than -70 dBm for good performance
+   - Link Quality: Should be >80%
+   - Check for high error/retry counts
+
+3. Realign the antennas
+   - Start with the bridge closest to you
+   - Make small adjustments (1-2 degrees)
+   - Monitor signal strength in real-time via web interface
+   - Ensure direct line-of-sight
+   - Tighten mounting hardware after optimal position found
+
+4. Check for obstructions
+   - Verify clear line-of-sight
+   - Look for new obstacles (tree growth, construction, etc.)
+   - Consider weather conditions
+
+NEXT STEPS IF ALIGNMENT DOESN'T HELP:
+1. Check for interference (try different 5.8GHz channel)
+2. Verify all cable connections are secure
+3. Check power supplies are providing correct voltage
+4. Review bridge logs for errors
+5. Consider temporary direct connection to router to confirm bridges are issue
+
+TESTING METHODOLOGY USED
+========================
+- Ping tests to router and internet
+- Packet loss analysis
+- Latency measurements
+- Speed tests (download and upload)
+- Network interface statistics
+- ARP table analysis
+
+All tests consistently pointed to the wireless bridge link as the bottleneck.
