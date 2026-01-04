@@ -76,6 +76,14 @@ The main window includes:
 - **Simple Search**: Type any word or phrase (e.g., "James")
   - Finds documents containing that term anywhere in content or filename
 
+- **Multi-Word Search**: Type multiple words separated by spaces (e.g., "Abraham prophecy")
+  - Finds documents where ALL words appear together in the content OR all in the filename
+  - Both words must be in the same field (not split between filename and content)
+  - Words can appear in any order within the document
+
+- **Exact Phrase Search**: Use quotes for exact phrases (e.g., "The Abrahamic Prophecy")
+  - Finds documents containing that exact phrase
+
 - **AND Operator**: Use AND to search for multiple terms (e.g., "James AND John")
   - Finds documents that contain BOTH terms
   - Case-insensitive (AND, and, And all work)

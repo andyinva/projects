@@ -215,17 +215,26 @@ class DocxDatabase:
                 words = query.split()
 
                 if len(words) > 1:
-                    conditions = []
+                    # For multiple words, ALL words must appear in content (not split between filename and content)
+                    content_conditions = []
+                    filename_conditions = []
                     params = []
 
                     for word in words:
                         search_pattern = f"%{word}%"
-                        conditions.append("(content LIKE ? OR filename LIKE ?)")
-                        params.extend([search_pattern, search_pattern])
+                        content_conditions.append("content LIKE ?")
+                        filename_conditions.append("filename LIKE ?")
+                        params.append(search_pattern)  # for content
 
+                    # Duplicate params for filename search
+                    for word in words:
+                        search_pattern = f"%{word}%"
+                        params.append(search_pattern)  # for filename
+
+                    # Match if ALL words are in content OR ALL words are in filename
                     sql = f"""
                         SELECT * FROM documents
-                        WHERE {' AND '.join(conditions)}{type_filter}
+                        WHERE (({' AND '.join(content_conditions)}) OR ({' AND '.join(filename_conditions)})){type_filter}
                         ORDER BY modified_date DESC
                     """
                     cursor.execute(sql, params + type_params)
