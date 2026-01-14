@@ -100,10 +100,10 @@ class SearchController(QObject):
         
     def search(self, search_term: str, case_sensitive: bool = False,
                unique_verses: bool = False, abbreviate_results: bool = False,
-               translations: Optional[List[str]] = None):
+               translations: Optional[List[str]] = None, book_filter: Optional[List[str]] = None):
         """
         Execute a Bible search with specified parameters.
-        
+
         Args:
             search_term (str): The search query (word, phrase, or verse reference)
             case_sensitive (bool): Whether search should be case-sensitive
@@ -111,32 +111,36 @@ class SearchController(QObject):
             abbreviate_results (bool): Whether to abbreviate common words
             translations (list, optional): List of translation abbreviations to search.
                 Defaults to ['KJV'] if not provided.
-                
+            book_filter (list, optional): List of book names to restrict search to.
+                Empty list or None means search all books.
+
         Side Effects:
             - Initiates background search via BibleSearchService
             - Resets search state for new search
             - Will eventually emit search_results_ready or search_failed signal
-            
+
         Example:
-            >>> controller.search("faith hope love", 
+            >>> controller.search("faith hope love",
             ...                   case_sensitive=False,
-            ...                   translations=['KJV', 'NIV', 'ESV'])
+            ...                   translations=['KJV', 'NIV', 'ESV'],
+            ...                   book_filter=['Matthew', 'Mark', 'Luke', 'John'])
         """
         if not search_term or not search_term.strip():
             self.search_status.emit("Please enter search terms")
             return
-            
+
         # Reset search state
         self.all_search_results = []
         self.loaded_results_count = 0
-        
+
         # Create search settings
         settings = SearchSettings()
         settings.case_sensitive = case_sensitive
         settings.unique_verses = unique_verses
         settings.abbreviate_results = abbreviate_results
         settings.enabled_translations = translations or ['KJV']
-        
+        settings.book_filter = book_filter or []
+
         # Start search (will emit signals when complete)
         self.search_service.search(search_term, settings)
         
@@ -309,27 +313,41 @@ class SearchController(QObject):
         total_results = len(results)
         search_time = results[0].get('search_time', 0) if results else 0
         search_term = results[0].get('search_term', '') if results else ''
-        
+
+        # Extract unique verse metadata if available
+        unique_verses_enabled = results[0].get('unique_verses_enabled', False) if results else False
+        total_before_filter = results[0].get('total_count', total_results) if results else 0
+        unique_count = results[0].get('unique_count', total_results) if results else 0
+
         metadata = {
             'loaded_count': self.loaded_results_count,
             'total_count': total_results,
             'search_time': search_time,
             'search_term': search_term,
-            'has_more': total_results > self.batch_size
+            'has_more': total_results > self.batch_size,
+            'unique_verses_enabled': unique_verses_enabled,
+            'total_before_filter': total_before_filter,
+            'unique_count': unique_count
         }
-        
+
         # Emit signal with formatted verses
         self.search_results_ready.emit(initial_batch, metadata)
-        
-        # Update status
-        if total_results > self.batch_size:
-            self.search_status.emit(
-                f"({search_term}) Loaded {self.loaded_results_count} of {total_results} results in {search_time:.2f}s - scroll down for more"
-            )
+
+        # Build status message
+        if unique_verses_enabled and unique_count is not None:
+            # Show both total and unique counts
+            if total_results > self.batch_size:
+                status_msg = f"({search_term}) Loaded {self.loaded_results_count} of {total_results} results ({total_before_filter} total, {unique_count} unique) in {search_time:.2f}s - scroll down for more"
+            else:
+                status_msg = f"({search_term}) Search completed: {total_before_filter} total, {unique_count} unique results in {search_time:.2f}s"
         else:
-            self.search_status.emit(
-                f"({search_term}) Search completed: {total_results} results found in {search_time:.2f}s"
-            )
+            # Normal message without unique count
+            if total_results > self.batch_size:
+                status_msg = f"({search_term}) Loaded {self.loaded_results_count} of {total_results} results in {search_time:.2f}s - scroll down for more"
+            else:
+                status_msg = f"({search_term}) Search completed: {total_results} results found in {search_time:.2f}s"
+
+        self.search_status.emit(status_msg)
             
     def _on_service_search_failed(self, error_message: str):
         """Handle search failure from BibleSearchService"""

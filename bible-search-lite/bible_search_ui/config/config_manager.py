@@ -96,7 +96,8 @@ class ConfigManager:
             'font_settings': {
                 'title_font_size': 0,
                 'verse_font_size': 0
-            }
+            },
+            'search_history': []
         }
         
     def load(self) -> Optional[Dict[str, Any]]:

@@ -10,8 +10,57 @@ Author: Andrew Hopkins
 
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                              QCheckBox, QGridLayout, QGroupBox, QRadioButton,
-                             QDialogButtonBox)
+                             QDialogButtonBox, QScrollArea, QWidget, QLabel, QMessageBox, QLineEdit, QTextEdit)
 from PyQt6.QtCore import Qt
+
+# Translation publication dates
+TRANSLATION_DATES = {
+    'ACV': '',
+    'AKJ': '',
+    'AND': '1864',
+    'ASV': '1901',
+    'BBE': '1949',
+    'BIS': '1568',
+    'BSB': '2016',
+    'BST': '1844',
+    'COV': '1535',
+    'CPD': '2009',
+    'DBT': '1890',
+    'DRB': '1582-1610',
+    'DRC': '1749-52',
+    'ERV': '1881-85',
+    'GEN': '1560',
+    'GN2': '1599',
+    'HAW': '1795',
+    'JPS': '1917',
+    'JUB': '2000',
+    'KJA': '1611',
+    'KJV': '1611',
+    'KPC': '1900',
+    'LEB': '2012',
+    'LIT': '1985',
+    'MKJ': '1962',
+    'NET': '2005',
+    'NHE': '2023',
+    'NHJ': '2023',
+    'NHM': '2023',
+    'NOY': '1869',
+    'OEB': '2010',
+    'OEC': '2010',
+    'RLT': '',
+    'RNK': '',
+    'ROT': '1902',
+    'RWB': '1833',
+    'TWE': '1904',
+    'TYD': '1525',
+    'TYN': '1526-30',
+    'UKJ': '',
+    'WBT': '1833',
+    'WEB': '2020',
+    'WNT': '1903',
+    'WYC': '1382-95',
+    'YLT': '1862'
+}
 
 
 class TranslationSelectorDialog(QDialog):
@@ -85,17 +134,57 @@ class TranslationSelectorDialog(QDialog):
         select_buttons_layout.addStretch()
         layout.addLayout(select_buttons_layout)
 
+        # Sort translations by date (most recent first, then oldest, then no date)
+        def get_sort_key(translation):
+            """
+            Returns a sort key for translations.
+            Most recent dates first, oldest last, no dates at the end.
+            """
+            abbrev = translation.abbreviation
+            date = TRANSLATION_DATES.get(abbrev, '')
+
+            if not date:
+                # No date - sort to end (use year 0)
+                return 0
+
+            # Extract year from date string
+            # Handle ranges like "1582-1610" by taking the end year
+            if '-' in date:
+                parts = date.split('-')
+                # Get the last part (end year)
+                year_str = parts[-1]
+            else:
+                year_str = date
+
+            try:
+                year = int(year_str)
+                # Negate to sort most recent first
+                return -year
+            except ValueError:
+                # If we can't parse it, treat as no date
+                return 0
+
+        sorted_translations = sorted(self.translations, key=get_sort_key)
+
         # Create checkboxes for each translation in a grid
         grid = QGridLayout()
         row = 0
         col = 0
         max_cols = 4
 
-        for translation in self.translations:
-            # Create checkbox with full translation name
-            cb = QCheckBox(f"{translation.abbreviation} - {translation.full_name}")
-            cb.setChecked(translation.abbreviation in self.selected_translations)
-            self.checkboxes[translation.abbreviation] = cb
+        for translation in sorted_translations:
+            # Create checkbox with full translation name and date
+            abbrev = translation.abbreviation
+            date = TRANSLATION_DATES.get(abbrev, '')
+
+            if date:
+                label = f"{abbrev} - {translation.full_name} ({date})"
+            else:
+                label = f"{abbrev} - {translation.full_name}"
+
+            cb = QCheckBox(label)
+            cb.setChecked(abbrev in self.selected_translations)
+            self.checkboxes[abbrev] = cb
             grid.addWidget(cb, row, col)
 
             # Move to next grid position
@@ -575,6 +664,140 @@ class SubjectDialog(QDialog):
         name = self.name_input.text().strip()
         description = self.description_input.toPlainText().strip()
         return (name, description)
+
+
+class SearchFilterDialog(QDialog):
+    """
+    Dialog for filtering search results by word variations.
+
+    Shows all unique words found in search results with their counts,
+    allowing users to uncheck words they want to exclude from the results.
+
+    Features:
+    - Scrollable list of words with checkboxes
+    - Word counts displayed next to each word
+    - "Uncheck All" button for quick deselection
+    - Returns list of selected words to filter by
+
+    Example:
+        >>> word_counts = {"Send": 15, "Sending": 10, "Sent": 25}
+        >>> dialog = SearchFilterDialog(self, word_counts)
+        >>> if dialog.exec():
+        ...     selected_words = dialog.get_selected_words()
+        ...     # Re-filter search results using selected_words
+    """
+
+    def __init__(self, parent, word_counts):
+        """
+        Initialize the search filter dialog.
+
+        Args:
+            parent (QWidget): Parent window
+            word_counts (dict): Dictionary mapping words to their occurrence counts
+                Example: {"Send": 15, "Sending": 10, "Sent": 25}
+        """
+        super().__init__(parent)
+        self.word_counts = word_counts
+        self.checkboxes = {}  # Map word -> checkbox widget
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Create the dialog user interface."""
+        self.setWindowTitle("Filter Search Results")
+        self.setMinimumWidth(400)
+        self.setMinimumHeight(500)
+
+        layout = QVBoxLayout(self)
+
+        # Header label - show number of unique word variations found
+        total_verses = sum(self.word_counts.values())
+        header = QLabel(f"Found {len(self.word_counts)} word variation(s) in {total_verses} verse(s). Uncheck words to exclude:")
+        header.setStyleSheet("font-weight: bold; padding: 5px;")
+        layout.addWidget(header)
+
+        # Scrollable area for word checkboxes
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { border: 1px solid #ccc; }")
+
+        # Container widget for checkboxes
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setSpacing(2)
+
+        # Sort words alphabetically for display
+        sorted_words = sorted(self.word_counts.keys())
+
+        # Create checkbox for each word
+        for word in sorted_words:
+            count = self.word_counts[word]
+            cb = QCheckBox(f"{word} ({count})")
+            cb.setChecked(True)  # All checked by default
+            cb.setStyleSheet("padding: 3px;")
+            self.checkboxes[word] = cb
+            container_layout.addWidget(cb)
+
+        container_layout.addStretch()
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
+
+        # Button layout
+        button_layout = QHBoxLayout()
+
+        # Uncheck All button
+        uncheck_all_btn = QPushButton("Uncheck All")
+        uncheck_all_btn.clicked.connect(self.uncheck_all)
+        uncheck_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #e0e0e0;
+                border: 1px solid #999;
+                padding: 5px 15px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #d0d0d0;
+            }
+        """)
+        button_layout.addWidget(uncheck_all_btn)
+
+        button_layout.addStretch()
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+    def uncheck_all(self):
+        """Uncheck all word checkboxes."""
+        for cb in self.checkboxes.values():
+            cb.setChecked(False)
+
+    def get_selected_words(self):
+        """
+        Get list of words that are currently checked.
+
+        Returns:
+            list: List of word strings that have checkboxes checked
+        """
+        selected = []
+        for word, cb in self.checkboxes.items():
+            if cb.isChecked():
+                selected.append(word)
+        return selected
 
 
 # END OF ADDITIONS TO dialogs.py

@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QThread
 from PyQt6.QtGui import QFont, QColor, QPalette
 
 # Version number
-VERSION = "1.0.2"
+VERSION = "1.0.4"
 
 # Import custom UI components, config, and controllers from refactored modules
 from bible_search_ui.ui.widgets import VerseItemWidget, VerseListWidget, SectionWidget
@@ -159,10 +159,6 @@ class BibleSearchProgram(QMainWindow):
                 border: 1px solid #0078d4;
                 image: url(none);
             }
-            QCheckBox::indicator:checked:after {
-                content: "✓";
-                color: white;
-            }
             QLineEdit, QComboBox {
                 background-color: #ffffff;
                 color: #000000;
@@ -191,7 +187,7 @@ class BibleSearchProgram(QMainWindow):
         self.title_font_size = 0  # Current: 9px
         self.verse_font_size = 0  # Current: 9px for reference and text
         self.title_font_sizes = [9, 9.5, 10, 10.5, 11]  # 5 choices, 0.5pt increments
-        self.verse_font_sizes = [9, 9.5, 10, 10.5, 11]   # 5 choices, 0.5pt increments
+        self.verse_font_sizes = [9, 9.5, 10, 10.5, 11, 11.5, 12]   # 7 choices, 0.5pt increments
 
         # Context-sensitive buttons (will be created in setup_ui)
         self.tips_btn = None
@@ -332,6 +328,8 @@ class BibleSearchProgram(QMainWindow):
         search_verses = VerseListWidget("search")
         search_verses.main_window = self  # Enable click-to-activate
         search_verses.verse_navigation_requested.connect(self.on_verse_navigation)
+        search_verses.selection_changed.connect(self.update_subject_acquire_button)
+        search_verses.selection_changed.connect(self.update_window3_acquire_style)
         self.verse_lists['search'] = search_verses
         self.selection_manager.register_window("search", search_verses)
 
@@ -343,6 +341,8 @@ class BibleSearchProgram(QMainWindow):
         reading_verses = VerseListWidget("reading")
         reading_verses.main_window = self  # Enable click-to-activate
         reading_verses.verse_navigation_requested.connect(self.on_verse_navigation)
+        reading_verses.selection_changed.connect(self.update_subject_acquire_button)
+        reading_verses.selection_changed.connect(self.update_window3_acquire_style)
         self.verse_lists['reading'] = reading_verses
         self.selection_manager.register_window("reading", reading_verses)
 
@@ -421,6 +421,64 @@ class BibleSearchProgram(QMainWindow):
             else:
                 self.acquire_button.setStyleSheet(self.get_button_style())
                 print(f"Acquire button normal - no selections available")
+
+    def update_subject_acquire_button(self):
+        """Update the Acquire button state in Window 4 when selections change in Windows 2 or 3"""
+        if not self.subject_manager:
+            return
+
+        # If Windows 4 & 5 are not visible, the verse_manager won't exist yet
+        if not self.subject_manager.verse_manager:
+            return
+
+        # Check if there are any selected verses in Windows 2 or 3
+        search_count = self.verse_lists['search'].get_selected_count()
+        reading_count = self.verse_lists['reading'].get_selected_count()
+        has_selections = (search_count > 0) or (reading_count > 0)
+
+        # Check if a subject is selected in EITHER Window 3 OR Window 4
+        # This allows using Window 3's subject dropdown to enable Window 4's Acquire button
+        has_subject_in_window4 = self.subject_manager.verse_manager.current_subject_id is not None
+        has_subject_in_window3 = bool(self.reading_subject_combo.currentText().strip())
+        has_subject = has_subject_in_window4 or has_subject_in_window3
+
+        self.subject_manager.verse_manager.acquire_btn.setEnabled(has_subject and has_selections)
+
+        print(f"Subject Acquire button: W4_subject={has_subject_in_window4}, W3_subject={has_subject_in_window3}, selections={has_selections}, search={search_count}, reading={reading_count}")
+
+    def update_window3_acquire_style(self):
+        """Update Window 3 Acquire button styling based on selections"""
+        # Check if there are any selected verses in Windows 2 or 3
+        search_count = self.verse_lists['search'].get_selected_count()
+        reading_count = self.verse_lists['reading'].get_selected_count()
+        has_selections = (search_count > 0) or (reading_count > 0)
+
+        # Check if a subject is selected in Window 3
+        has_subject = bool(self.reading_subject_combo.currentText().strip())
+
+        # Green style when selections are available and subject is selected
+        green_style = """
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: 2px solid #45a049;
+                border-radius: 3px;
+                padding: 4px 8px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """
+
+        # Normal style
+        normal_style = self.get_button_style()
+
+        # Apply green style if both conditions met, otherwise normal
+        if has_subject and has_selections:
+            self.send_btn.setStyleSheet(green_style)
+        else:
+            self.send_btn.setStyleSheet(normal_style)
 
     def create_title_button(self, text):
         """Create a standardized button for section title bars"""
@@ -551,13 +609,55 @@ class BibleSearchProgram(QMainWindow):
         self.reading_subject_combo.setPlaceholderText("Select or create subject...")
         self.reading_subject_combo.setMinimumWidth(200)
         self.reading_subject_combo.currentTextChanged.connect(self.on_reading_subject_changed)
+
+        # Style dropdown for visibility on all platforms
+        self.reading_subject_combo.setStyleSheet("""
+            QComboBox {
+                background-color: white;
+                color: black;
+                border: 1px solid #999;
+                padding: 4px 8px;
+                border-radius: 2px;
+                min-width: 150px;
+            }
+            QComboBox:editable {
+                background-color: white;
+                color: black;
+            }
+            QComboBox:hover {
+                border: 1px solid #666;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #555;
+                margin-right: 5px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: black;
+                selection-background-color: #0078d4;
+                selection-color: white;
+                border: 1px solid #999;
+            }
+            QLineEdit {
+                background-color: white;
+                color: black;
+            }
+        """)
+
         layout.addWidget(self.reading_subject_combo)
 
-        # Send button (works like Acquire)
-        self.send_btn = QPushButton("Send")
+        # Acquire button (adds checked verses to selected subject)
+        self.send_btn = QPushButton("Acquire")
         self.send_btn.setEnabled(False)  # Disabled until subject selected
         self.send_btn.clicked.connect(self.on_send_to_subject)
-        self.send_btn.setToolTip("Send checked verses to selected subject")
+        self.send_btn.setToolTip("Acquire checked verses to selected subject")
         layout.addWidget(self.send_btn)
 
         # Stretch to push References dropdown to the right
@@ -636,12 +736,20 @@ class BibleSearchProgram(QMainWindow):
                     padding: 4px 8px;
                     border-radius: 2px;
                     min-width: 50px;
+                    color: #000000;
                 }
                 QPushButton:hover {
                     background-color: #d0d0d0;
+                    color: #000000;
                 }
                 QPushButton:pressed {
                     background-color: #c0c0c0;
+                    color: #000000;
+                }
+                QPushButton:disabled {
+                    background-color: #f0f0f0;
+                    color: #999999;
+                    border: 1px solid #ccc;
                 }
             """
 
@@ -870,6 +978,27 @@ class BibleSearchProgram(QMainWindow):
         if show:
             self.subject_manager.show()
             self.message_label.setText("✓ Subject features enabled")
+
+            # If Window 3 has a subject selected, sync it to Window 4 and load verses
+            if hasattr(self, 'reading_subject_combo'):
+                subject_name = self.reading_subject_combo.currentText().strip()
+                if subject_name and self.subject_manager.verse_manager:
+                    # Get subject ID
+                    try:
+                        cursor = self.subject_manager.db_conn.cursor()
+                        cursor.execute("SELECT id FROM subjects WHERE name = ?", (subject_name,))
+                        result = cursor.fetchone()
+                        if result:
+                            subject_id = result['id']
+                            # Set Window 4's dropdown to match Window 3
+                            self.subject_manager.verse_manager.subject_dropdown.setCurrentText(subject_name)
+                            self.subject_manager.verse_manager.current_subject = subject_name
+                            self.subject_manager.verse_manager.current_subject_id = subject_id
+                            # Load the verses
+                            self.subject_manager.verse_manager.load_subject_verses()
+                            print(f"✓ Auto-loaded subject '{subject_name}' verses into Window 4")
+                    except Exception as e:
+                        print(f"⚠️ Error auto-loading subject: {e}")
         else:
             self.subject_manager.hide()
             self.message_label.setText("✓ Subject features hidden")
@@ -1291,6 +1420,9 @@ class BibleSearchProgram(QMainWindow):
                 verse_font.setBold(False)
                 verse_font.setPointSizeF(verse_size)  # Use setPointSizeF for fractional sizes
                 widget.text_label.setFont(verse_font)
+
+            # Recalculate verse heights after font change
+            verse_list.update_item_sizes()
 
     def perform_search(self):
         """Perform a Bible search using SearchController"""
@@ -1832,6 +1964,10 @@ class BibleSearchProgram(QMainWindow):
 
         print(f"✓ Applied {verse_size}pt font to {len(verses)} context verses individually")
 
+        # Update size hints after font changes to prevent text cutoff
+        self.verse_lists['reading'].update_item_sizes()
+        print(f"✓ Updated size hints for all verses in reading window")
+
         # Highlight the first verse (the one that was clicked)
         if verses:
             # Clear any previous highlights in Window 3 first
@@ -1857,10 +1993,11 @@ class BibleSearchProgram(QMainWindow):
             self.update_cross_references_dropdown(verse_reference)
             print(f"🔗 Loading cross-references for {verse_reference}")
 
-            # Automatically activate Window 3 (Reading) after loading context
-            # This allows user to immediately use Ctrl+A or Copy without clicking
-            self.set_active_window('reading')
-            print("🎯 Auto-activated Window 3 (Reading Window)")
+            # NOTE: We used to auto-activate Window 3 here, but that prevented
+            # Window 2 from staying active when clicking verses in it.
+            # Users can click Window 3 if they want to work there.
+            # self.set_active_window('reading')
+            # print("🎯 Auto-activated Window 3 (Reading Window)")
 
     def on_tips_clicked(self):
         """Show context-sensitive tips based on active window"""
@@ -3649,9 +3786,10 @@ from liability. It's the same license used by many popular open-source projects.
         print(f"📋 Copied to clipboard:")
         print(f"   First verse: {text_lines[0][:100]}..." if text_lines else "   (empty)")
 
-        # Uncheck all boxes after copying (this will auto-unlock via checkbox handler)
-        self.verse_lists[active].select_none()
-        print(f"📋 Unchecked all {verse_count} verses")
+        # Uncheck all boxes in both Windows 2 & 3 after copying (this will auto-unlock via checkbox handler)
+        self.verse_lists['search'].select_none()
+        self.verse_lists['reading'].select_none()
+        print(f"📋 Unchecked all verses in Windows 2 & 3")
 
         # Show success message (unlock happens automatically when boxes uncheck)
         self.message_label.setText(f"Copied {verse_count} verse(s) to clipboard ({text_size_kb:.1f} KB)")
@@ -4254,10 +4392,14 @@ from liability. It's the same license used by many popular open-source projects.
 
         # Restore normal button styles
         self.copy_btn.setStyleSheet(self.get_button_style())
+        self.send_btn.setStyleSheet(self.get_button_style())  # Window 3 Acquire button
 
         if hasattr(self, 'acquire_button') and self.acquire_button:
             self.acquire_button.setEnabled(True)
             self.update_acquire_button_state()
+
+        # Update Window 3 Acquire button styling
+        self.update_window3_acquire_style()
 
         # Restore normal message label style
         self.message_label.setStyleSheet("background-color: white; padding: 10px; border: 1px solid #ccc;")
@@ -4286,15 +4428,49 @@ from liability. It's the same license used by many popular open-source projects.
 
     def on_reading_subject_changed(self, subject_name):
         """Handle subject selection change in Window 3."""
-        # Enable Send button if subject is selected and not empty
+        # Prevent infinite recursion when syncing dropdowns
+        if hasattr(self, '_syncing_subjects') and self._syncing_subjects:
+            return
+
+        # Enable Acquire button in Window 3 if subject is selected and not empty
         has_subject = bool(subject_name and subject_name.strip())
         self.send_btn.setEnabled(has_subject)
+
+        # Also update Window 4's Acquire button state
+        self.update_subject_acquire_button()
+
+        # Update Window 3 Acquire button styling
+        self.update_window3_acquire_style()
 
         if has_subject:
             print(f"✓ Reading window subject selected: {subject_name}")
 
+            # Sync to Window 4 and load verses
+            if self.subject_manager and self.subject_manager.verse_manager:
+                try:
+                    # Set flag to prevent recursion
+                    self._syncing_subjects = True
+
+                    # Get subject ID
+                    cursor = self.subject_manager.db_conn.cursor()
+                    cursor.execute("SELECT id FROM subjects WHERE name = ?", (subject_name.strip(),))
+                    result = cursor.fetchone()
+                    if result:
+                        subject_id = result['id']
+                        # Set Window 4's dropdown to match Window 3
+                        self.subject_manager.verse_manager.subject_dropdown.setCurrentText(subject_name)
+                        self.subject_manager.verse_manager.current_subject = subject_name
+                        self.subject_manager.verse_manager.current_subject_id = subject_id
+                        # Load the verses
+                        self.subject_manager.verse_manager.load_subject_verses()
+                        print(f"✓ Synced Window 4 to Window 3 subject: '{subject_name}'")
+                except Exception as e:
+                    print(f"⚠️  Error syncing subject to Window 4: {e}")
+                finally:
+                    self._syncing_subjects = False
+
     def on_send_to_subject(self):
-        """Send checked verses from Window 3 (reading) to selected subject."""
+        """Acquire checked verses from Window 3 (reading) to selected subject."""
         subject_name = self.reading_subject_combo.currentText().strip()
 
         if not subject_name:
@@ -4305,12 +4481,16 @@ from liability. It's the same license used by many popular open-source projects.
             self.message_label.setText("⚠️ Subject features not initialized")
             return
 
-        # Get checked verses from reading window
-        checked_verses = self.verse_lists['reading'].get_selected_verses()
+        # Get checked verses from BOTH Windows 2 & 3
+        search_verses = self.verse_lists['search'].get_selected_verses()
+        reading_verses = self.verse_lists['reading'].get_selected_verses()
+        checked_verses = search_verses + reading_verses
 
         if not checked_verses:
-            self.message_label.setText("⚠️ No verses selected in reading window")
+            self.message_label.setText("⚠️ No verses selected in Windows 2 or 3")
             return
+
+        print(f"📊 Window 3 Acquire: Found {len(search_verses)} verses in Window 2, {len(reading_verses)} verses in Window 3")
 
         try:
             # Check if subject exists, create if not
@@ -4335,13 +4515,22 @@ from liability. It's the same license used by many popular open-source projects.
                 self.load_subjects_for_reading()
                 if self.subject_manager.verse_manager:
                     self.subject_manager.verse_manager.load_subjects()
+                    # Select the newly created subject in Window 4
+                    self.subject_manager.verse_manager.subject_dropdown.setCurrentText(subject_name)
+                    self.subject_manager.verse_manager.current_subject = subject_name
+                    self.subject_manager.verse_manager.current_subject_id = subject_id
 
             # Add verses to subject
             added_count = 0
             for verse_id in checked_verses:
-                if verse_id in self.verse_lists['reading'].verse_items:
+                # Check both search and reading windows for this verse
+                verse_widget = None
+                if verse_id in self.verse_lists['search'].verse_items:
+                    item, verse_widget = self.verse_lists['search'].verse_items[verse_id]
+                elif verse_id in self.verse_lists['reading'].verse_items:
                     item, verse_widget = self.verse_lists['reading'].verse_items[verse_id]
 
+                if verse_widget:
                     # Insert verse into subject_verses table
                     try:
                         cursor.execute("""
@@ -4361,6 +4550,10 @@ from liability. It's the same license used by many popular open-source projects.
                         print(f"Error adding verse: {e}")
 
             self.subject_manager.db_conn.commit()
+
+            # Uncheck all verses in both Windows 2 & 3 after acquiring
+            self.verse_lists['search'].select_none()
+            self.verse_lists['reading'].select_none()
 
             # Update message
             if added_count > 0:

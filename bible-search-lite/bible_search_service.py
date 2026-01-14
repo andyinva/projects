@@ -20,6 +20,7 @@ class SearchSettings:
         self.unique_verses = False
         self.abbreviate_results = False
         self.enabled_translations = ["KJV"]
+        self.book_filter = []  # List of book names to filter by (empty = all books)
 
 
 class SearchWorker(QThread):
@@ -54,10 +55,14 @@ class SearchWorker(QThread):
                 enabled_translations=self.settings.enabled_translations,
                 case_sensitive=self.settings.case_sensitive,
                 unique_verses=self.settings.unique_verses,
-                abbreviate_results=self.settings.abbreviate_results
+                abbreviate_results=self.settings.abbreviate_results,
+                book_filter=self.settings.book_filter
             )
 
             search_time = time.time() - start_time
+
+            # Get metadata from BibleSearch (includes unique verse counts if applicable)
+            search_metadata = getattr(self.bible_search, 'last_search_metadata', {})
 
             # Convert SearchResult objects to dictionaries for compatibility
             results_dicts = []
@@ -67,7 +72,11 @@ class SearchWorker(QThread):
                     'Translation': result.translation,
                     'Text': result.highlighted_text if result.highlighted_text else result.text,
                     'search_time': search_time,
-                    'search_term': self.search_term
+                    'search_term': self.search_term,
+                    # Add metadata to each result for access in UI
+                    'total_count': search_metadata.get('total_count', len(results_dicts)),
+                    'unique_count': search_metadata.get('unique_count'),
+                    'unique_verses_enabled': search_metadata.get('unique_verses_enabled', False)
                 })
 
             self.progress_update.emit(f"Found {len(results_dicts)} results in {search_time:.2f}s")
