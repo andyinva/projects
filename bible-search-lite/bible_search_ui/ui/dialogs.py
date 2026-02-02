@@ -28,6 +28,7 @@ TRANSLATION_DATES = {
     'DBT': '1890',
     'DRB': '1582-1610',
     'DRC': '1749-52',
+    'EDG': '1864',
     'ERV': '1881-85',
     'GEN': '1560',
     'GN2': '1599',
@@ -51,6 +52,7 @@ TRANSLATION_DATES = {
     'RNK': '',
     'ROT': '1902',
     'RWB': '1833',
+    'SLT': '1876',
     'TWE': '1904',
     'TYD': '1525',
     'TYN': '1526-30',
@@ -72,7 +74,7 @@ class TranslationSelectorDialog(QDialog):
     convenience buttons for selecting all or none.
     
     Features:
-    - Grid layout with up to 4 columns
+    - Grid layout with 2 columns
     - Select All / Select None buttons
     - Validation (prevents empty selection)
     - Returns list of selected translation abbreviations
@@ -113,11 +115,13 @@ class TranslationSelectorDialog(QDialog):
     def setup_ui(self):
         """
         Create the dialog user interface.
-        
+
         Layout structure:
         - Title bar (from QDialog)
         - Select All / Select None buttons (horizontal layout)
-        - Translation checkboxes (4-column grid)
+        - Translation checkboxes (2-column grid)
+        - Divider with "Translations With Old English Wording" label
+        - Old English translation checkboxes (2-column grid)
         - OK / Cancel buttons (dialog button box)
         """
         self.setWindowTitle("Select Translations")
@@ -133,6 +137,19 @@ class TranslationSelectorDialog(QDialog):
         select_buttons_layout.addWidget(select_none_btn)
         select_buttons_layout.addStretch()
         layout.addLayout(select_buttons_layout)
+
+        # Define old English translations that should be grouped at bottom
+        old_english_abbrevs = {'BIS', 'COV', 'WYC', 'GN2', 'GEN', 'TYD', 'TYN'}
+
+        # Separate translations into two groups
+        regular_translations = []
+        old_english_translations = []
+
+        for translation in self.translations:
+            if translation.abbreviation in old_english_abbrevs:
+                old_english_translations.append(translation)
+            else:
+                regular_translations.append(translation)
 
         # Sort translations by date (most recent first, then oldest, then no date)
         def get_sort_key(translation):
@@ -164,23 +181,30 @@ class TranslationSelectorDialog(QDialog):
                 # If we can't parse it, treat as no date
                 return 0
 
-        sorted_translations = sorted(self.translations, key=get_sort_key)
+        regular_translations = sorted(regular_translations, key=get_sort_key)
+        old_english_translations = sorted(old_english_translations, key=get_sort_key)
 
-        # Create checkboxes for each translation in a grid
+        # Create checkboxes for regular translations in a grid
         grid = QGridLayout()
         row = 0
         col = 0
-        max_cols = 4
+        max_cols = 2
 
-        for translation in sorted_translations:
-            # Create checkbox with full translation name and date
+        for translation in regular_translations:
+            # Create checkbox with translation name and date
             abbrev = translation.abbreviation
+            full_name = translation.full_name
             date = TRANSLATION_DATES.get(abbrev, '')
 
+            # Remove date from full_name if it already contains it (to avoid duplicates)
+            # Check if full_name ends with a year in parentheses
+            import re
+            full_name_cleaned = re.sub(r'\s*\(\d{4}(?:-\d{2,4})?\)\s*$', '', full_name)
+
             if date:
-                label = f"{abbrev} - {translation.full_name} ({date})"
+                label = f"{abbrev} - {full_name_cleaned} ({date})"
             else:
-                label = f"{abbrev} - {translation.full_name}"
+                label = f"{abbrev} - {full_name_cleaned}"
 
             cb = QCheckBox(label)
             cb.setChecked(abbrev in self.selected_translations)
@@ -195,13 +219,63 @@ class TranslationSelectorDialog(QDialog):
 
         layout.addLayout(grid)
 
+        # Add divider and label for old English translations
+        divider_layout = QVBoxLayout()
+        divider_layout.addSpacing(10)
+
+        # Add horizontal line
+        divider_line = QWidget()
+        divider_line.setFixedHeight(2)
+        divider_line.setStyleSheet("background-color: #999;")
+        divider_layout.addWidget(divider_line)
+
+        # Add label
+        old_english_label = QLabel("Translations With Old English Wording")
+        old_english_label.setStyleSheet("font-weight: bold; padding: 5px 0;")
+        divider_layout.addWidget(old_english_label)
+
+        layout.addLayout(divider_layout)
+
+        # Create checkboxes for old English translations in a grid
+        old_english_grid = QGridLayout()
+        row = 0
+        col = 0
+
+        for translation in old_english_translations:
+            # Create checkbox with translation name and date
+            abbrev = translation.abbreviation
+            full_name = translation.full_name
+            date = TRANSLATION_DATES.get(abbrev, '')
+
+            # Remove date from full_name if it already contains it (to avoid duplicates)
+            import re
+            full_name_cleaned = re.sub(r'\s*\(\d{4}(?:-\d{2,4})?\)\s*$', '', full_name)
+
+            if date:
+                label = f"{abbrev} - {full_name_cleaned} ({date})"
+            else:
+                label = f"{abbrev} - {full_name_cleaned}"
+
+            cb = QCheckBox(label)
+            cb.setChecked(abbrev in self.selected_translations)
+            self.checkboxes[abbrev] = cb
+            old_english_grid.addWidget(cb, row, col)
+
+            # Move to next grid position
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+
+        layout.addLayout(old_english_grid)
+
         # Connect select all/none buttons
         select_all_btn.clicked.connect(self.select_all)
         select_none_btn.clicked.connect(self.select_none)
 
         # Add OK and Cancel buttons
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Ok |
             QDialogButtonBox.StandardButton.Cancel
         )
         button_box.accepted.connect(self.accept)
@@ -210,13 +284,17 @@ class TranslationSelectorDialog(QDialog):
         
     def select_all(self):
         """
-        Check all translation checkboxes.
-        
+        Check all translation checkboxes except old English translations.
+
         Side Effects:
-            - Sets all checkboxes to checked state
+            - Sets all checkboxes to checked state except BIS, COV, WYC, GN2, GEN, TYD, TYN
         """
-        for cb in self.checkboxes.values():
-            cb.setChecked(True)
+        # Define old English translations that should not be auto-selected
+        old_english_abbrevs = {'BIS', 'COV', 'WYC', 'GN2', 'GEN', 'TYD', 'TYN'}
+
+        for abbrev, cb in self.checkboxes.items():
+            if abbrev not in old_english_abbrevs:
+                cb.setChecked(True)
             
     def select_none(self):
         """
@@ -308,7 +386,7 @@ class FontSettingsDialog(QDialog):
     def setup_ui(self):
         """
         Create the dialog user interface.
-        
+
         Layout structure:
         - Title bar (from QDialog)
         - Title font size group (radio buttons in vertical layout)
@@ -321,6 +399,28 @@ class FontSettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
 
+        # Set explicit styling for radio buttons (Windows compatibility)
+        radio_button_style = """
+            QRadioButton {
+                spacing: 8px;
+                font-size: 11px;
+            }
+            QRadioButton::indicator {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #555;
+                border-radius: 8px;
+                background-color: white;
+            }
+            QRadioButton::indicator:checked {
+                background-color: #4CAF50;
+                border: 2px solid #45a049;
+            }
+            QRadioButton::indicator:hover {
+                border: 2px solid #4CAF50;
+            }
+        """
+
         # Title font size selector
         title_group = QGroupBox("Title Font Size")
         title_layout = QVBoxLayout()
@@ -330,11 +430,12 @@ class FontSettingsDialog(QDialog):
             label = f"Size {i+1} ({size}px)"
             if i == 0:
                 label += " - Current"
-                
+
             rb = QRadioButton(label)
+            rb.setStyleSheet(radio_button_style)
             if i == self.current_title_size:
                 rb.setChecked(True)
-                
+
             self.title_buttons.append(rb)
             title_layout.addWidget(rb)
 
@@ -350,11 +451,12 @@ class FontSettingsDialog(QDialog):
             label = f"Size {i+1} ({size}px)"
             if i == 0:
                 label += " - Current"
-                
+
             rb = QRadioButton(label)
+            rb.setStyleSheet(radio_button_style)
             if i == self.current_verse_size:
                 rb.setChecked(True)
-                
+
             self.verse_buttons.append(rb)
             verse_layout.addWidget(rb)
 
@@ -711,8 +813,23 @@ class SearchFilterDialog(QDialog):
 
         # Header label - show number of unique word variations found
         total_verses = sum(self.word_counts.values())
-        header = QLabel(f"Found {len(self.word_counts)} word variation(s) in {total_verses} verse(s). Uncheck words to exclude:")
+
+        # Get displayed verse count from parent window to show if it differs
+        displayed_count = 0
+        if hasattr(self.parent(), 'verse_lists') and 'search' in self.parent().verse_lists:
+            displayed_count = len(self.parent().verse_lists['search'].verse_items)
+
+        # Build header message
+        if displayed_count > 0 and displayed_count != total_verses:
+            # Different counts - explain the difference
+            header_text = f"Found {len(self.word_counts)} word variation(s) from all search results (displaying {displayed_count} unique verses). Uncheck words to exclude:"
+        else:
+            # Same count or no display info - use simple message
+            header_text = f"Found {len(self.word_counts)} word variation(s) in {total_verses} verse(s). Uncheck words to exclude:"
+
+        header = QLabel(header_text)
         header.setStyleSheet("font-weight: bold; padding: 5px;")
+        header.setWordWrap(True)  # Allow text to wrap for longer message
         layout.addWidget(header)
 
         # Scrollable area for word checkboxes
@@ -762,6 +879,23 @@ class SearchFilterDialog(QDialog):
 
         button_layout.addStretch()
 
+        # Search button - triggers search with selected filter
+        search_btn = QPushButton("Search")
+        search_btn.clicked.connect(self.search_and_close)
+        search_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        button_layout.addWidget(search_btn)
+
         # Close button
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
@@ -785,6 +919,26 @@ class SearchFilterDialog(QDialog):
         """Uncheck all word checkboxes."""
         for cb in self.checkboxes.values():
             cb.setChecked(False)
+
+    def search_and_close(self):
+        """Apply filter and trigger search in parent window, then close dialog."""
+        # Get selected words
+        selected_words = self.get_selected_words()
+
+        # Store the filter in the parent window
+        if hasattr(self.parent(), 'filtered_words'):
+            self.parent().filtered_words = selected_words if selected_words else None
+
+            # Update filter button state
+            if hasattr(self.parent(), 'update_filter_button_state'):
+                self.parent().update_filter_button_state()
+
+            # Trigger the search
+            if hasattr(self.parent(), 'perform_search'):
+                self.parent().perform_search()
+
+        # Close the dialog
+        self.accept()
 
     def get_selected_words(self):
         """

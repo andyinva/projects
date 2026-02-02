@@ -90,17 +90,58 @@ class BibleSearch:
     
     def load_translations(self):
         """Load available translations from database."""
+        # Known publication dates for translations not in description field
+        TRANSLATION_DATES = {
+            'DRB': '1582-1610',
+            'DBT': '1890',
+            'WEB': '2000',
+            'WNT': '1903',
+            'NET': '2005',
+            'ACV': '2008',
+            'BSB': '2016',
+            'CPD': '2009',
+            'DRC': '1749-52',
+            'LEB': '2012',
+            'LIT': '1985',
+            'NHE': '2023',
+            'NHJ': '2023',
+            'NHM': '2023',
+            'OEB': '2010',
+            'OEC': '2010',
+            'TWE': '1904',
+            'MKJ': '1998',
+            'BST': '1844',
+            'BBE': '1965',
+            'JPS': '1917',
+            'ROT': '1902',
+            'YLT': '1862',
+            'JUB': '2000'
+        }
+
         try:
             conn = sqlite3.connect(self.database_path)
             cursor = conn.cursor()
-            
-            cursor.execute("SELECT abbreviation, name FROM translations ORDER BY id")
+
+            cursor.execute("SELECT abbreviation, name, description FROM translations ORDER BY id")
             translation_rows = cursor.fetchall()
-            
-            for i, (abbrev, name) in enumerate(translation_rows):
+
+            for i, (abbrev, name, description) in enumerate(translation_rows):
+                # Extract year from description if present
+                # Look for patterns like (1611), (1901), (1534), (1568-1611), etc.
+                year_match = re.search(r'\((\d{4}(?:-\d{2,4})?)\)', description)
+
+                if year_match:
+                    year = year_match.group(1)
+                    full_name = f"{name} ({year})"
+                elif abbrev in TRANSLATION_DATES:
+                    # Use hardcoded date if available
+                    full_name = f"{name} ({TRANSLATION_DATES[abbrev]})"
+                else:
+                    full_name = name
+
                 translation = Translation(
                     abbreviation=abbrev,
-                    full_name=name,
+                    full_name=full_name,
                     enabled=True,
                     sort_order=i + 1
                 )
@@ -199,6 +240,10 @@ class BibleSearch:
 
         For example: "love ~4 God" matches if "love" and "God" appear within 4 words or less of each other.
         """
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        query = query.replace("'", "\u2019")
+
         # Store the original query for later regex matching
         self._proximity_pattern = query
         self._proximity_case_sensitive = case_sensitive
@@ -221,8 +266,10 @@ class BibleSearch:
             search_terms = []
 
             for word in [word1, word2]:
+                # Strip quotes if present (to support "bless*" ~4 fertile syntax)
+                clean_word = word.strip('"').strip("'")
                 # Convert wildcards in the word
-                search_term = self.convert_wildcard_to_sql(word)
+                search_term = self.convert_wildcard_to_sql(clean_word)
                 like_pattern = f"%{search_term}%"
 
                 if case_sensitive:
@@ -250,6 +297,10 @@ class BibleSearch:
         For example: "love > neighbor" matches "love your neighbor", "love one another and your neighbor"
         The words must appear in the specified order but don't need to be consecutive.
         """
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        query = query.replace("'", "\u2019")
+
         # Store the original query for later regex matching
         self._ordered_words_pattern = query
         self._ordered_words_case_sensitive = case_sensitive
@@ -264,8 +315,10 @@ class BibleSearch:
         search_terms = []
 
         for word in ordered_words:
+            # Strip quotes if present (to support "bless*" > fertile syntax)
+            clean_word = word.strip('"').strip("'")
             # Convert wildcards in the word
-            search_term = self.convert_wildcard_to_sql(word)
+            search_term = self.convert_wildcard_to_sql(clean_word)
             like_pattern = f"%{search_term}%"
 
             if case_sensitive:
@@ -289,6 +342,10 @@ class BibleSearch:
 
         For example: "who & send" matches "who will send", "who can send", etc.
         """
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        query = query.replace("'", "\u2019")
+
         # Store the original query for later regex matching
         self._word_placeholder_pattern = query
         self._word_placeholder_case_sensitive = case_sensitive
@@ -322,6 +379,38 @@ class BibleSearch:
 
         return where_clause, search_terms
 
+    def _build_query_with_parentheses(self, query: str, case_sensitive: bool, not_search: bool) -> Tuple[str, List[str]]:
+        """Build query for searches with parentheses to control operator precedence.
+
+        Example: ("sleep*" OR "slep*") AND father
+
+        For simplicity, we just tell users to write the query with explicit AND for all terms.
+        This method will be enhanced in the future.
+        """
+        # For now, fall back to normal query building but add SQL parentheses
+        # This is a simplified implementation - full parentheses support would require
+        # a proper expression parser
+
+        # Simple approach: detect pattern (term OR term) AND term
+        # and rewrite the WHERE clause with proper parentheses
+        import re
+
+        # Remove the ( ) from query and build normally, but track where they were
+        query_no_parens = query.replace('(', '').replace(')', '')
+        where_clause, search_terms = self.build_word_search_query(query_no_parens, case_sensitive)
+
+        # If query had pattern: (A OR B) AND C
+        # The where_clause is: A OR B AND C
+        # We need to make it: (A OR B) AND C
+
+        # Find first AND in the where clause and wrap everything before it in parens
+        and_pos = where_clause.upper().find(' AND ')
+        if and_pos > 0:
+            # Wrap the part before AND in parentheses
+            where_clause = f"({where_clause[:and_pos]}) {where_clause[and_pos:]}"
+
+        return where_clause, search_terms
+
     def build_word_search_query(self, query: str, case_sensitive: bool = False) -> Tuple[str, List[str]]:
         """Build SQL query for word search with wildcards and operators.
 
@@ -332,6 +421,10 @@ class BibleSearch:
         - > : ordered words separator (e.g., "love > neighbor" matches "love your neighbor")
         - ~N : proximity operator (e.g., "love ~4 God" matches if words within 4 words or less)
         """
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        query = query.replace("'", "\u2019")
+
         words = []
         operators = []
 
@@ -365,6 +458,10 @@ class BibleSearch:
             # Convert query like "who & send" to pattern for Python regex matching
             return self._build_word_placeholder_query(query, case_sensitive, not_search)
 
+        # Check for parentheses - if present, handle them first
+        if '(' in query or ')' in query:
+            return self._build_query_with_parentheses(query, case_sensitive, not_search)
+
         # Split by AND/OR while preserving quoted phrases
         parts = re.findall(r'"[^"]*"|[^\s]+', query)
 
@@ -377,44 +474,69 @@ class BibleSearch:
                 continue
             
             # Remove quotes from exact phrases
+            quoted_wildcard = False  # Track if this is a quoted wildcard term
             if part.startswith('"') and part.endswith('"'):
-                search_term = part[1:-1]
-                # For quoted terms, use word boundary matching
-                # We'll use multiple LIKE conditions to ensure word boundaries
-                quoted_term = True
+                search_term = part[1:-1]  # Remove quotes
+
+                # Check if quoted term contains wildcards
+                # "sent*" means words starting with "sent" (with word boundaries)
+                if '*' in search_term or '%' in search_term or '?' in search_term:
+                    # Quoted wildcard - treat as wildcard with word boundaries
+                    quoted_term = False
+                    quoted_wildcard = True  # Mark as quoted wildcard
+                    # Store for word boundary filtering
+                    if not hasattr(self, '_wildcard_terms'):
+                        self._wildcard_terms = []
+                    self._wildcard_terms.append(search_term)
+                    self._wildcard_case_sensitive = case_sensitive
+                    # Apply wildcard conversion
+                    search_term = self.convert_wildcard_to_sql(search_term)
+                else:
+                    # Quoted exact phrase without wildcards
+                    quoted_term = True
             else:
+                # Unquoted term - wildcards are NOT supported
+                # Treat wildcards as literal characters
+                # "sing*" without quotes should search for the literal text "sing*"
                 quoted_term = False
-                # Apply wildcard conversion
-                search_term = self.convert_wildcard_to_sql(part)
-            
+                search_term = part  # Use as-is, no wildcard conversion
+
             if quoted_term:
                 # For quoted terms, we'll do a broader search and filter for exact matches in Python
                 # This is simpler and more reliable than complex SQL word boundary logic
                 like_pattern = f"%{search_term}%"
-                
+
                 if case_sensitive:
                     condition = "text LIKE ?"
                 else:
                     condition = "LOWER(text) LIKE LOWER(?)"
-                
+
                 if not_search:
                     condition = f"NOT ({condition})"
-                
+
                 sql_conditions.append(condition)
                 search_terms.append(like_pattern)
                 # Note: We'll filter for exact word matches in the results processing
             else:
                 # Regular wildcard search
-                like_pattern = f"%{search_term}%"
-                
+                # For quoted wildcards, add % on both sides to find matches anywhere in text
+                # The word boundary filtering in Python will ensure precise matching
+                if quoted_wildcard:
+                    # Quoted wildcard like "sing*" or "father'?" needs % on both sides
+                    # to match anywhere in the text, then Python regex will enforce word boundaries
+                    like_pattern = f"%{search_term}%"
+                else:
+                    # Unquoted wildcard or regular term - allow matches anywhere
+                    like_pattern = f"%{search_term}%"
+
                 if case_sensitive:
                     condition = "text LIKE ?"
                 else:
                     condition = "LOWER(text) LIKE LOWER(?)"
-                
+
                 if not_search:
                     condition = f"NOT ({condition})"
-                
+
                 sql_conditions.append(condition)
                 search_terms.append(like_pattern)
         
@@ -444,9 +566,13 @@ class BibleSearch:
         word1 = proximity_match.group(1).strip()
         word2 = proximity_match.group(3).strip()
 
+        # Strip quotes if present (to support "bless*" ~4 fertile syntax)
+        clean_word1 = word1.strip('"').strip("'")
+        clean_word2 = word2.strip('"').strip("'")
+
         # Convert wildcards to regex
-        word1_pattern = word1.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
-        word2_pattern = word2.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+        word1_pattern = clean_word1.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+        word2_pattern = clean_word2.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
 
         # Build regex patterns
         regex1 = r'\b' + word1_pattern + r'\b'
@@ -491,8 +617,10 @@ class BibleSearch:
         # Build regex pattern to find all matching words
         regex_parts = []
         for word in ordered_words:
+            # Strip quotes if present (to support "bless*" > fertile syntax)
+            clean_word = word.strip('"').strip("'")
             # Convert wildcards to regex
-            word_pattern = word.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+            word_pattern = clean_word.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
             regex_parts.append(r'\b' + word_pattern + r'\b')
 
         # Find each word and highlight it
@@ -568,6 +696,10 @@ class BibleSearch:
 
     def highlight_search_terms(self, text: str, query: str) -> str:
         """Highlight search terms in text with [ ] brackets."""
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        query = query.replace("'", "\u2019")
+
         # Special handling for proximity patterns (~N)
         if re.search(r' ~\d+ ', query):
             return self._highlight_proximity_pattern(text, query)
@@ -592,115 +724,130 @@ class BibleSearch:
         for term in terms:
             if term.upper() in ['AND', 'OR', '!']:
                 continue
+
+            # Strip parentheses from terms (they're used for grouping in queries)
+            term = term.strip('()')
             
             # Handle quoted phrases
             if term.startswith('"') and term.endswith('"'):
                 phrase = term[1:-1]  # Remove quotes
                 if phrase:
-                    # Find exact phrase matches with word boundaries for exact word matching
-                    pattern = r'\b' + re.escape(phrase) + r'\b'
-                    for match in re.finditer(pattern, text, flags=re.IGNORECASE):
-                        matches_to_highlight.append((match.start(), match.end(), match.group(0)))
-            else:
-                # Handle wildcard terms
-                if '*' in term or '?' in term or '%' in term:
-                    # Convert wildcard pattern to regex to match SQL behavior exactly
-                    # SQL _ matches ANY single character including spaces
-                    # SQL % matches any sequence of characters including spaces
-                    # * is converted to % by our system, so they're equivalent
+                    # Check if quoted phrase contains wildcards
+                    # "sing*" means words starting with "sing" (with word boundaries)
+                    if '*' in phrase or '?' in phrase or '%' in phrase:
+                        # Quoted wildcard - build pattern with word boundaries
+                        # Track the base pattern (non-wildcard part) for two-color highlighting
+                        regex_parts = []
+                        starts_with_wildcard = phrase.startswith('*') or phrase.startswith('%') or phrase.startswith('?')
 
-                    # For highlighting, we need to match patterns that can span across words
-                    # but still highlight individual words that are part of the match
+                        if not starts_with_wildcard:
+                            regex_parts.append(r'\b')
 
-                    # Build regex pattern character by character
-                    regex_parts = []
-                    for char in term:
-                        if char == '*' or char == '%':
-                            regex_parts.append(r'.*?')     # Match any characters including spaces (non-greedy)
-                        elif char == '?':
-                            regex_parts.append(r'.')       # Match any single character including space
+                        # Build the base pattern (without wildcards) to identify the fixed part
+                        # Only use two-color highlighting for patterns like "father*" (letters + wildcard at end)
+                        # Don't use it for patterns like "?'*" (wildcard at start)
+                        if starts_with_wildcard:
+                            # Pattern starts with wildcard - no clear base, use single-color highlighting
+                            base_pattern = None
                         else:
-                            regex_parts.append(re.escape(char))
-                    
-                    wildcard_pattern = ''.join(regex_parts)
-                    
-                    # Find matches that can span across word boundaries
-                    for match in re.finditer(wildcard_pattern, text, flags=re.IGNORECASE):
-                        matched_text = match.group(0)
-                        
-                        # For patterns with ?, we need to highlight meaningful words involved
-                        if '?' in term and not '*' in term:
-                            # Extract individual words from the match that are substantial (2+ chars)
-                            words_in_match = re.findall(r'\b\w{2,}(?:\'[ts])?\b', matched_text)
-                            
-                            # Find position of each word and add to highlights
-                            search_pos = match.start()
-                            remaining_text = text[search_pos:]
-                            
-                            for word in words_in_match:
-                                word_match = re.search(r'\b' + re.escape(word) + r'\b', remaining_text)
-                                if word_match:
-                                    word_start = search_pos + word_match.start()
-                                    word_end = search_pos + word_match.end()
-                                    matches_to_highlight.append((word_start, word_end, word))
-                                    # Update search position to after this word
-                                    search_pos += word_match.end()
-                        else:
-                            # For * patterns or mixed patterns, highlight the whole match
-                            matches_to_highlight.append((match.start(), match.end(), matched_text))
-                else:
-                    # Regular term without wildcards
-                    clean_term = term.strip('"')
-                    if clean_term:
-                        # First try exact word matches
-                        exact_pattern = r'\b' + re.escape(clean_term) + r'\b'
-                        exact_matches = list(re.finditer(exact_pattern, text, flags=re.IGNORECASE))
-                        
-                        if exact_matches:
-                            # Use exact matches if found
-                            for match in exact_matches:
-                                matches_to_highlight.append((match.start(), match.end(), match.group(0)))
-                        else:
-                            # If no exact matches, find words containing the search term (like SQL LIKE %term%)
-                            # But be more restrictive with short terms to avoid false matches
-                            if len(clean_term) <= 2:
-                                # For very short terms (1-2 chars), only highlight if they appear at word boundaries
-                                # This prevents "I" from highlighting "Israel", "David", etc.
-                                boundary_pattern = r'\b' + re.escape(clean_term) + r'(?=\W|$)'
-                                for match in re.finditer(boundary_pattern, text, flags=re.IGNORECASE):
-                                    matches_to_highlight.append((match.start(), match.end(), match.group(0)))
+                            # Pattern starts with letters - extract base for two-color highlighting
+                            base_pattern = phrase.replace('*', '').replace('%', '').replace('?', '')
+
+                        for char in phrase:
+                            if char == '*' or char == '%':
+                                # Match word characters including apostrophes
+                                regex_parts.append(r"[a-zA-Z]*(?:[''][a-zA-Z]*)*")
+                            elif char == '?':
+                                regex_parts.append(r'\w')
                             else:
-                                # For longer terms, find words containing the search term
-                                containing_pattern = r'\b\w*' + re.escape(clean_term) + r'\w*\b'
-                                for word_match in re.finditer(containing_pattern, text, flags=re.IGNORECASE):
-                                    # Highlight the entire word that contains the search term
-                                    # This ensures "fruitful" is bracketed as "[fruitful]" not "[fruit]ful"
-                                    word_text = word_match.group(0)
-                                    word_start = word_match.start()
-                                    word_end = word_match.end()
-                                    matches_to_highlight.append((word_start, word_end, word_text))
+                                regex_parts.append(re.escape(char))
+
+                        # Don't add extra possessive pattern - it's already handled in the wildcard match above
+                        regex_parts.append(r'\b')
+                        wildcard_pattern = ''.join(regex_parts)
+                        for match in re.finditer(wildcard_pattern, text, flags=re.IGNORECASE):
+                            # Store: (start, end, matched_text, base_pattern_for_coloring)
+                            matches_to_highlight.append((match.start(), match.end(), match.group(0), base_pattern))
+                    else:
+                        # Quoted phrase without wildcards - exact match with word boundaries
+                        pattern = r'\b' + re.escape(phrase) + r'\b'
+                        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                            # No wildcard - no two-color highlighting needed (None as 4th element)
+                            matches_to_highlight.append((match.start(), match.end(), match.group(0), None))
+            else:
+                # Unquoted term - wildcards are NOT supported
+                # Treat *, ?, % as literal characters
+                # For unquoted terms, use partial matching (matches "sent" in "presents")
+                clean_term = term.strip('"')
+                if clean_term:
+                    # For unquoted terms, find words containing the search term (like SQL LIKE %term%)
+                    # This is more intuitive - unquoted = broader match, quoted = exact match
+                    if len(clean_term) <= 2:
+                        # For very short terms (1-2 chars), only highlight if they appear at word boundaries
+                        # This prevents "I" from highlighting "Israel", "David", etc.
+                        boundary_pattern = r'\b' + re.escape(clean_term) + r'(?=\W|$)'
+                        for match in re.finditer(boundary_pattern, text, flags=re.IGNORECASE):
+                            matches_to_highlight.append((match.start(), match.end(), match.group(0), None))
+                    else:
+                        # For longer terms, find words containing the search term
+                        # Pattern: \b\w*term\w*\b matches whole words containing "term"
+                        # Example: "sent" matches "sent", "presents", "sentries", "resent"
+                        containing_pattern = r'\b\w*' + re.escape(clean_term) + r'\w*\b'
+                        for word_match in re.finditer(containing_pattern, text, flags=re.IGNORECASE):
+                            # Highlight the entire word that contains the search term
+                            # This ensures "presents" is bracketed as "[presents]" not "pre[sent]s"
+                            word_text = word_match.group(0)
+                            word_start = word_match.start()
+                            word_end = word_match.end()
+                            matches_to_highlight.append((word_start, word_end, word_text, None))
         
         # Sort matches by position (reverse order for easier processing)
         matches_to_highlight.sort(key=lambda x: x[0], reverse=True)
-        
+
         # Remove overlapping matches (keep the first/longest one)
         filtered_matches = []
-        for start, end, matched_text in matches_to_highlight:
+        for start, end, matched_text, base_pattern in matches_to_highlight:
             # Check if this match overlaps with any already accepted match
             overlaps = False
-            for existing_start, existing_end, _ in filtered_matches:
+            for existing_start, existing_end, _, _ in filtered_matches:
                 if not (end <= existing_start or start >= existing_end):
                     overlaps = True
                     break
-            
+
             if not overlaps:
-                filtered_matches.append((start, end, matched_text))
-        
+                filtered_matches.append((start, end, matched_text, base_pattern))
+
         # Apply highlights from right to left (to preserve indices)
         highlighted_text = text
-        for start, end, matched_text in filtered_matches:
-            highlighted_text = highlighted_text[:start] + matched_text + highlighted_text[end:]
-        
+        for start, end, matched_text, base_pattern in filtered_matches:
+            # Two-color highlighting for wildcard matches
+            if base_pattern:
+                # Find where the base pattern ends in the matched text
+                base_len = len(base_pattern)
+                matched_lower = matched_text.lower()
+                base_lower = base_pattern.lower()
+
+                # Find the base in the match (case-insensitive)
+                base_start = matched_lower.find(base_lower)
+                if base_start != -1:
+                    base_end = base_start + base_len
+                    base_part = matched_text[base_start:base_end]
+
+                    # Check if there's a variation after the base
+                    if base_end < len(matched_text):
+                        variation_part = matched_text[base_end:]
+                        # Base in brackets, variation in curly braces for blue color
+                        highlighted_text = highlighted_text[:start] + '[' + base_part + ']{' + variation_part + '}' + highlighted_text[end:]
+                    else:
+                        # No variation - just base
+                        highlighted_text = highlighted_text[:start] + '[' + matched_text + ']' + highlighted_text[end:]
+                else:
+                    # Couldn't find base - just use regular brackets
+                    highlighted_text = highlighted_text[:start] + '[' + matched_text + ']' + highlighted_text[end:]
+            else:
+                # No wildcard - regular bracketing
+                highlighted_text = highlighted_text[:start] + '[' + matched_text + ']' + highlighted_text[end:]
+
         return highlighted_text
     
     def _wildcard_length_matches(self, pattern: str, text: str) -> bool:
@@ -912,8 +1059,14 @@ class BibleSearch:
         self._ordered_words_case_sensitive = False
         self._proximity_pattern = None
         self._proximity_case_sensitive = False
+        self._wildcard_terms = []  # Store wildcard terms for word boundary filtering
+        self._wildcard_case_sensitive = False
 
         where_clause, search_terms = self.build_word_search_query(query, case_sensitive)
+
+        # Store whether query uses OR operator for later filtering
+        self._query_uses_or = ' OR ' in query.upper()
+
         results = []
 
         for translation in self.translations:
@@ -953,6 +1106,10 @@ class BibleSearch:
                 for row in rows:
                     # Filter results to ensure quoted terms are exact word matches
                     if not self._contains_exact_quoted_terms(row[3], query, case_sensitive):
+                        continue
+
+                    # Filter results for wildcard terms with word boundaries
+                    if not self._matches_wildcard_word_boundaries(row[3]):
                         continue
 
                     # Filter results for proximity patterns (queries with ~N)
@@ -1002,9 +1159,13 @@ class BibleSearch:
         distance = getattr(self, '_proximity_distance', 0)
         case_sensitive = getattr(self, '_proximity_case_sensitive', False)
 
+        # Strip quotes if present (to support "bless*" ~4 fertile syntax)
+        clean_word1 = word1.strip('"').strip("'")
+        clean_word2 = word2.strip('"').strip("'")
+
         # Convert wildcards to regex
-        word1_pattern = word1.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
-        word2_pattern = word2.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+        word1_pattern = clean_word1.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+        word2_pattern = clean_word2.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
 
         # Build regex patterns for both words
         word1_regex = r'\b' + word1_pattern + r'\b'
@@ -1081,9 +1242,11 @@ class BibleSearch:
         # For "love > neighbor", build: \blove\b.*?\bneighbor\b
         regex_parts = []
         for word in ordered_words:
+            # Strip quotes if present (to support "bless*" > fertile syntax)
+            clean_word = word.strip('"').strip("'")
             # Convert wildcards to regex
             # Both * and % are stem/root wildcards
-            word_pattern = word.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
+            word_pattern = clean_word.replace('*', r'\w*').replace('%', r'\w*').replace('?', r'\w')
             regex_parts.append(r'\b' + word_pattern + r'\b')
 
         # Join with .*? (any characters, non-greedy) to allow words in between
@@ -1133,27 +1296,106 @@ class BibleSearch:
 
         return match is not None
 
+    def _matches_wildcard_word_boundaries(self, text: str) -> bool:
+        """Check if wildcard terms match with word boundaries.
+
+        For example:
+        - sent* should match "sent", "sentence" but NOT "present"
+        - *sent should match "sent", "resent" but NOT "sentence"
+        - *sent* should match "present", "sentence", "resent"
+
+        For OR queries, returns True if ANY term matches.
+        For AND queries, returns True only if ALL terms match.
+        """
+        if not hasattr(self, '_wildcard_terms') or not self._wildcard_terms:
+            return True
+
+        case_sensitive = getattr(self, '_wildcard_case_sensitive', False)
+        flags = 0 if case_sensitive else re.IGNORECASE
+
+        # Check if query uses OR operator
+        uses_or = getattr(self, '_query_uses_or', False)
+
+        # For OR queries: return True if ANY term matches
+        # For AND queries: return True only if ALL terms match
+        matches = []
+
+        for term in self._wildcard_terms:
+            # Convert wildcard term to regex with word boundaries
+            # * and % mean "any word characters" (not any characters)
+            # ? means "single word character"
+
+            pattern_parts = []
+            i = 0
+            starts_with_wildcard = term.startswith('*') or term.startswith('%')
+            ends_with_wildcard = term.endswith('*') or term.endswith('%')
+
+            # Add word boundary at start if term doesn't start with wildcard
+            if not starts_with_wildcard:
+                pattern_parts.append(r'\b')
+
+            # Convert the term character by character
+            while i < len(term):
+                char = term[i]
+                if char in ('*', '%'):
+                    # Match any word characters (stays within word boundaries)
+                    pattern_parts.append(r'\w*')
+                elif char == '?':
+                    # Match single word character
+                    pattern_parts.append(r'\w')
+                else:
+                    # Literal character
+                    pattern_parts.append(re.escape(char))
+                i += 1
+
+            # Always add word boundary at end
+            # sent* means "words starting with sent", so we need \bsent\w*\b
+            # This ensures "sent" is at a word boundary, and * only matches within the word
+            pattern_parts.append(r'\b')
+
+            pattern = ''.join(pattern_parts)
+
+            # Check if this pattern matches in the text
+            term_matches = bool(re.search(pattern, text, flags))
+            matches.append(term_matches)
+
+            # For OR queries, we can return early if we find a match
+            if uses_or and term_matches:
+                return True
+
+        # For OR queries: if we got here, no term matched
+        if uses_or:
+            return False
+
+        # For AND queries: all terms must match
+        return all(matches)
+
     def _contains_exact_quoted_terms(self, text: str, query: str, case_sensitive: bool) -> bool:
         """Check if text contains all quoted terms as exact word matches."""
         # Extract quoted terms from query
         quoted_terms = re.findall(r'"([^"]*)"', query)
-        
+
         if not quoted_terms:
             # No quoted terms, so no filtering needed
             return True
-        
+
         # Check each quoted term for exact word match
         for term in quoted_terms:
             if not term.strip():
                 continue
-            
-            # Create word boundary pattern
+
+            # Skip quoted wildcards - they're handled by _matches_wildcard_word_boundaries
+            # "sing*" should be filtered by wildcard matching, not exact matching
+            if '*' in term or '%' in term or '?' in term:
+                continue
+
+            # Create word boundary pattern for non-wildcard quoted terms
             pattern = r'\b' + re.escape(term) + r'\b'
             flags = 0 if case_sensitive else re.IGNORECASE
-            
+
             if not re.search(pattern, text, flags):
                 return False
-        
+
         return True
     
     def _filter_unique_verses(self, results: List[SearchResult]) -> List[SearchResult]:

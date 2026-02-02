@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QSize, QThread
 from PyQt6.QtGui import QFont, QColor, QPalette
 
 # Version number
-VERSION = "1.1.1"
+VERSION = "1.1.3"
 
 # Import custom UI components, config, and controllers from refactored modules
 from bible_search_ui.ui.widgets import VerseItemWidget, VerseListWidget, SectionWidget
@@ -232,7 +232,9 @@ class BibleSearchProgram(QMainWindow):
         self.available_word_variations = 0  # Count of available word variations for filter
 
         # Cross-reference history for "Go Back" functionality
-        self.cross_ref_history = []  # Stack of (verse_reference, references_list) tuples
+        # Each entry is: (verse_reference, references_list, verse_list_state)
+        # verse_list_state contains the verse data needed to restore Window 3
+        self.cross_ref_history = []
 
         # Store references to verse list widgets
         self.verse_lists = {}
@@ -1951,13 +1953,19 @@ class BibleSearchProgram(QMainWindow):
 
             # If no AND/OR was found, split on spaces (each word is a separate term)
             # For example: "who sen*" → ["who", "sen*"]
+            # But keep quoted phrases together: '"love one another"' → ['"love one another"']
             if len(terms) == 1 and ' ' in terms[0]:
                 # Split on spaces, but keep quoted phrases together
-                # For now, simple split on spaces
-                terms = terms[0].split()
+                # Use regex to match quoted strings or individual words
+                terms = re.findall(r'"[^"]*"|\'[^\']*\'|\S+', terms[0])
 
             for term in terms:
                 term = term.strip()
+                if not term:
+                    continue
+
+                # Strip parentheses from terms (they're used for grouping in queries)
+                term = term.strip('()')
                 if not term:
                     continue
 
@@ -1972,31 +1980,47 @@ class BibleSearchProgram(QMainWindow):
 
                 term_lower = term_clean.lower()
 
+                # Check if this is a multi-word phrase (contains spaces)
+                is_phrase = ' ' in term_lower
+
                 # Build pattern based on whether term is quoted
                 if is_quoted:
-                    # Check if quoted term contains wildcards
-                    # "sing*" should match words starting with "sing"
-                    if '*' in term_lower or '%' in term_lower or '?' in term_lower:
-                        # Quoted wildcard - build pattern with word boundaries
-                        pattern_parts = []
-                        pattern_parts.append(r'^')
-
-                        for char in term_lower:
-                            if char in ('*', '%'):
-                                pattern_parts.append(r'\w*')
-                            elif char == '?':
-                                pattern_parts.append(r'\w')
-                            else:
-                                pattern_parts.append(re.escape(char))
-
-                        pattern_parts.append(r'$')
-                        pattern = ''.join(pattern_parts)
-                        search_patterns.append(re.compile(pattern))
+                    if is_phrase:
+                        # Multi-word quoted phrase like "love one another"
+                        # Don't add to search_patterns - we'll extract the whole phrase below
+                        # Store phrase pattern for later extraction
+                        if not hasattr(self, '_phrase_patterns_for_filter'):
+                            self._phrase_patterns_for_filter = []
+                        # Escape the phrase and match it as a whole
+                        phrase_pattern = re.compile(re.escape(term_lower), re.IGNORECASE)
+                        self._phrase_patterns_for_filter.append((term_lower, phrase_pattern))
+                        continue
                     else:
-                        # Quoted term without wildcards: exact word match only (strict)
-                        # Pattern: ^word$ matches only the exact word
-                        pattern = r'^' + re.escape(term_lower) + r'$'
-                        search_patterns.append(re.compile(pattern))
+                        # Single-word quoted term
+                        # Check if quoted term contains wildcards
+                        # "sing*" should match words starting with "sing"
+                        if '*' in term_lower or '%' in term_lower or '?' in term_lower:
+                            # Quoted wildcard - build pattern with word boundaries
+                            pattern_parts = []
+                            pattern_parts.append(r'^')
+
+                            for char in term_lower:
+                                if char in ('*', '%'):
+                                    # Match word characters including apostrophes
+                                    pattern_parts.append(r"[a-zA-Z]*(?:[''][a-zA-Z]*)*")
+                                elif char == '?':
+                                    pattern_parts.append(r'\w')
+                                else:
+                                    pattern_parts.append(re.escape(char))
+
+                            pattern_parts.append(r'$')
+                            pattern = ''.join(pattern_parts)
+                            search_patterns.append(re.compile(pattern))
+                        else:
+                            # Quoted term without wildcards: exact word match only (strict)
+                            # Pattern: ^word$ matches only the exact word
+                            pattern = r'^' + re.escape(term_lower) + r'$'
+                            search_patterns.append(re.compile(pattern))
                 else:
                     # Unquoted term: partial match (matches word containing the term)
                     # Wildcards are NOT supported for unquoted terms - treat as literal characters
@@ -2009,10 +2033,44 @@ class BibleSearchProgram(QMainWindow):
 
             self.debug_print(f"🔍 Search patterns for filtering: {[p.pattern for p in search_patterns]}")
 
-        # Extract words from all results
+        # Check if we have phrase patterns to extract
+        has_phrase_patterns = hasattr(self, '_phrase_patterns_for_filter') and self._phrase_patterns_for_filter
+
+        if has_phrase_patterns:
+            # Extract phrase occurrences instead of individual words
+            phrase_counts = {}
+            for result in all_results:
+                if isinstance(result, dict):
+                    text = result.get('Text', '')
+                elif hasattr(result, 'text'):
+                    text = result.text
+                else:
+                    text = str(result)
+                text_cleaned = text.replace('[', '').replace(']', '')
+
+                # Search for each phrase pattern
+                for phrase_text, phrase_pattern in self._phrase_patterns_for_filter:
+                    # Find all occurrences of the phrase in this verse
+                    matches = phrase_pattern.findall(text_cleaned)
+                    for match in matches:
+                        # Normalize phrase to title case for display
+                        phrase_normalized = ' '.join(word.capitalize() for word in match.split())
+                        phrase_counts[phrase_normalized] = phrase_counts.get(phrase_normalized, 0) + 1
+
+            # Clean up temporary phrase patterns
+            del self._phrase_patterns_for_filter
+
+            self.debug_print(f"📊 Found {len(phrase_counts)} unique phrase(s) from {len(all_results)} verses:")
+            for phrase, count in sorted(phrase_counts.items(), key=lambda x: (-x[1], x[0])):
+                self.debug_print(f"   {phrase}: {count}")
+
+            return phrase_counts
+
+        # Extract words from all results (non-phrase queries)
         for result in all_results:
             # Extract words from verse text
-            # IMPORTANT: Remove highlight brackets [  ] from text before word extraction
+            # IMPORTANT: Remove highlight brackets [  ] and curly braces {  } from text before word extraction
+            # Our bracket notation uses [base]{variation} format
             # Results from controller are dicts with 'Text' key
             if isinstance(result, dict):
                 text = result.get('Text', '')
@@ -2020,10 +2078,11 @@ class BibleSearchProgram(QMainWindow):
                 text = result.text
             else:
                 text = str(result)
-            text_cleaned = text.replace('[', '').replace(']', '')
+            text_cleaned = text.replace('[', '').replace(']', '').replace('{', '').replace('}', '')
 
-            # Split on word boundaries, keep only alphanumeric words
-            words = re.findall(r'\b[a-zA-Z]+\b', text_cleaned)
+            # Split on word boundaries, keep alphanumeric words including possessives (father's)
+            # Pattern matches: word or word's or word'
+            words = re.findall(r"\b[a-zA-Z]+(?:[''][a-zA-Z]*)?\b", text_cleaned)
 
             for word in words:
                 # Only include words that match one of the search patterns
@@ -2163,12 +2222,13 @@ class BibleSearchProgram(QMainWindow):
     def apply_word_filter(self, verses):
         """
         Filter verses to only include those containing selected words.
+        Also re-applies highlighting to show only the filtered words.
 
         Args:
             verses (list): List of SearchResult objects
 
         Returns:
-            list: Filtered list of SearchResult objects
+            list: Filtered list of SearchResult objects with updated highlighting
         """
         import re
 
@@ -2179,21 +2239,51 @@ class BibleSearchProgram(QMainWindow):
 
         # Convert filtered words to lowercase set for case-insensitive matching
         allowed_words_lower = {word.lower() for word in self.filtered_words}
+        self.debug_print(f"🔍 Filtering for words: {allowed_words_lower}")
 
         for verse in verses:
-            # IMPORTANT: Remove highlight brackets before word extraction
-            # Same issue as in extract_word_counts - highlighted text contains brackets
-            text_cleaned = verse.text.replace('[', '').replace(']', '')
+            # IMPORTANT: Remove highlight brackets AND curly braces before word extraction
+            # Our bracket notation uses [base]{variation} format for two-color highlighting
+            text_cleaned = verse.text.replace('[', '').replace(']', '').replace('{', '').replace('}', '')
 
-            # Extract words from verse text
-            words = re.findall(r'\b[a-zA-Z]+\b', text_cleaned)
+            # Extract words from verse text, including possessives (father's)
+            # Pattern matches: word or word's or word'
+            words = re.findall(r"\b[a-zA-Z]+(?:[''][a-zA-Z]*)?\b", text_cleaned)
             # Normalize to lowercase
             verse_words_lower = {word.lower() for word in words}
 
             # Check if any of the verse's words are in the allowed set
-            if verse_words_lower & allowed_words_lower:
+            matched_words = verse_words_lower & allowed_words_lower
+            if matched_words:
+                # Re-highlight the verse text to show only the filtered words
+                # Build a pattern that matches any of the filtered words (case-insensitive)
+                patterns = []
+                for word in self.filtered_words:
+                    # Escape special regex characters (including apostrophes) and add word boundaries
+                    escaped_word = re.escape(word)
+                    patterns.append(escaped_word)
+
+                # Combine patterns with OR
+                combined_pattern = r'\b(' + '|'.join(patterns) + r')\b'
+
+                # Find all matches and their positions in the cleaned text
+                matches = []
+                for match in re.finditer(combined_pattern, text_cleaned, re.IGNORECASE):
+                    matches.append((match.start(), match.end(), match.group(0)))
+
+                # Sort by position in reverse order to preserve indices when inserting brackets
+                matches.sort(key=lambda x: x[0], reverse=True)
+
+                # Apply new highlighting (single-color green only)
+                highlighted_text = text_cleaned
+                for start, end, matched_text in matches:
+                    highlighted_text = highlighted_text[:start] + '[' + matched_text + ']' + highlighted_text[end:]
+
+                # Update the verse text with new highlighting
+                verse.text = highlighted_text
                 filtered.append(verse)
 
+        self.debug_print(f"✅ Filter kept {len(filtered)} of {len(verses)} verses")
         return filtered
 
     def apply_font_settings(self):
@@ -2403,6 +2493,10 @@ class BibleSearchProgram(QMainWindow):
         if not search_query:
             return []
 
+        # Normalize apostrophes: Convert standard apostrophe (U+0027) to right single quotation mark (U+2019)
+        # The database uses U+2019 for apostrophes
+        search_query = search_query.replace("'", "\u2019")
+
         highlight_terms = []
 
         # Extract quoted phrases first (keep them as complete phrases)
@@ -2421,8 +2515,8 @@ class BibleSearchProgram(QMainWindow):
         # Remove quoted phrases from query to process remaining terms
         query_without_quotes = re.sub(quoted_pattern, '', search_query)
 
-        # Split on AND/OR operators
-        terms = re.split(r'\s+(?:AND|OR)\s+', query_without_quotes, flags=re.IGNORECASE)
+        # Split on AND/OR operators (as whole words)
+        terms = re.split(r'\b(?:AND|OR)\b', query_without_quotes, flags=re.IGNORECASE)
 
         # Process remaining individual words (non-quoted terms)
         for term in terms:
@@ -2852,6 +2946,13 @@ class BibleSearchProgram(QMainWindow):
         """Handle context verses for reading window"""
         self.debug_print(f"Received {len(verses)} context verses for reading window")
 
+        # Save current Window 3 state to history BEFORE clearing
+        # (This must happen before clearing so we save the OLD verses, not the new ones)
+        if verses:
+            first_verse = verses[0]
+            new_verse_reference = f"{first_verse.book_abbrev} {first_verse.chapter}:{first_verse.verse}"
+            self.save_window3_to_history_before_update(new_verse_reference)
+
         # Clear reading window
         self.verse_lists['reading'].clear_verses()
 
@@ -3240,14 +3341,15 @@ class BibleSearchProgram(QMainWindow):
         <p style="color: #d32f2f;"><b>⚠️ IMPORTANT: Wildcards REQUIRE quotation marks to work!</b></p>
 
         <h4>Asterisk (*) - Multiple Characters</h4>
-        <p>Matches any number of characters (including zero). Modifies the structure of a word.</p>
+        <p>Matches any number of characters (including zero). Modifies the structure of a word. <b>Automatically includes possessive forms (with apostrophes).</b></p>
         <ul>
-            <li><b>"love*"</b> → love, loved, loves, loving, lovingkindness</li>
+            <li><b>"love*"</b> → love, loved, loves, loving, lovingkindness, love's</li>
+            <li><b>"father*"</b> → father, fathers, father's, fathers'</li>
             <li><b>"*tion"</b> → salvation, nation, redemption</li>
             <li><b>"righ*ness"</b> → righteousness, richness</li>
         </ul>
         <p style="color: #d32f2f;"><b>✗ Wrong:</b> love* (treats asterisk as literal character - finds nothing)<br>
-        <span style="color: #388e3c;"><b>✓ Correct:</b> "love*" (wildcard works - finds variations)</span></p>
+        <span style="color: #388e3c;"><b>✓ Correct:</b> "love*" (wildcard works - finds variations including possessives)</span></p>
 
         <h4>Question Mark (?) - Single Character</h4>
         <p>Matches exactly one character. Modifies the structure of a word.</p>
@@ -3329,6 +3431,25 @@ class BibleSearchProgram(QMainWindow):
             <li><b>angel OR messenger</b> → either term</li>
         </ul>
 
+        <h4>Parentheses ( ) - Control Operator Precedence</h4>
+        <p>Use parentheses to control the order of operations when mixing AND and OR.</p>
+        <p style="background-color: #fff3e0; padding: 10px; border-left: 4px solid #ff9800;">
+        <b>Why you need them:</b><br>
+        • Without parentheses: <b>"sleep*" OR "slep*" AND father</b><br>
+        &nbsp;&nbsp;→ Evaluated as: "sleep*" OR ("slep*" AND father) due to AND having higher precedence<br>
+        &nbsp;&nbsp;→ Returns: verses with sleep*, OR verses with BOTH slep* and father<br><br>
+        • With parentheses: <b>("sleep*" OR "slep*") AND father</b><br>
+        &nbsp;&nbsp;→ Evaluated as: ("sleep*" OR "slep*") AND father<br>
+        &nbsp;&nbsp;→ Returns: verses with father AND (sleep* OR slep*)
+        </p>
+        <p><b>Examples:</b></p>
+        <ul>
+            <li><b>("faith" OR "belief") AND works</b> → verses with works AND either faith or belief</li>
+            <li><b>("Holy Spirit" OR "Spirit of God") AND power</b> → verses with power AND either phrase</li>
+            <li><b>("love*" OR "charity") AND neighbor</b> → verses with neighbor AND any love form or charity</li>
+        </ul>
+        <p><i>Note: Parentheses only work with AND/OR operators, not with special operators like >, ~, or &</i></p>
+
         <h3>Exact Phrases</h3>
         <p>Use quotation marks for exact word order or to enable wildcards.</p>
         <ul>
@@ -3343,10 +3464,12 @@ class BibleSearchProgram(QMainWindow):
             <li><b>"faith without" AND works</b> → exact phrase plus word</li>
             <li><b>"love*" AND neighbor</b> → any form of "love" with "neighbor" (quoted wildcard)</li>
             <li><b>"Holy Spirit" OR "Spirit of God"</b> → either phrase</li>
+            <li><b>("love*" OR "charity") AND neighbor</b> → verses with neighbor AND either love or charity (parentheses)</li>
             <li><b>"believ*" > Jesus</b> → any "believe" form before "Jesus" (quoted wildcard with operator)</li>
             <li><b>I & "lov*" > God</b> → "I [word] love/loved God" (quoted wildcard)</li>
             <li><b>"believ*" ~3 Jesus</b> → any "believe" form within 3 words of "Jesus" (quoted wildcard)</li>
             <li><b>"pray*" ~5 faith</b> → any "pray" form within 5 words of "faith" (quoted wildcard)</li>
+            <li><b>("faith" OR "belief") AND ("works" OR "deeds")</b> → complex AND/OR combinations (parentheses)</li>
         </ul>
 
         <h3>Important Limitations</h3>
@@ -5089,30 +5212,64 @@ PRESS, L.L.C. ALL RIGHTS RESERVED.""")
             self.debug_print(f"❌ Error loading cross-references: {e}")
             return []
 
+    def save_window3_to_history_before_update(self, new_verse_reference):
+        """
+        Save current Window 3 state to history before loading new verses.
+        This should be called BEFORE clearing Window 3.
+
+        Args:
+            new_verse_reference (str): The verse reference we're about to load
+        """
+        # Only save if we have a current verse AND it's different from the new one
+        current_verse = getattr(self, '_current_cross_ref_verse', None)
+        if not current_verse or current_verse == new_verse_reference:
+            return
+
+        # Only save if the cross-references dropdown has content
+        if not (self.cross_references_combo.isEnabled() and self.cross_references_combo.count() > 1):
+            return
+
+        # Save the current references list
+        current_refs = []
+        for i in range(1, self.cross_references_combo.count()):
+            ref = self.cross_references_combo.itemData(i)
+            text = self.cross_references_combo.itemText(i)
+            if ref:
+                current_refs.append((ref, text))
+
+        # Save Window 3 verse list state (THIS is why we call before clearing!)
+        verse_list_state = []
+        try:
+            for verse_id, verse_item in self.verse_lists['reading'].verse_items.items():
+                _, verse_widget = verse_item
+                verse_list_state.append({
+                    'verse_id': verse_id,
+                    'translation': verse_widget.translation,
+                    'book_abbrev': verse_widget.book_abbrev,
+                    'chapter': verse_widget.chapter,
+                    'verse_number': verse_widget.verse_number,
+                    'text': verse_widget.text_label.text(),
+                    'is_highlighted': verse_widget.is_highlighted
+                })
+
+            # Add to history stack (verse_reference, references_list, verse_list_state)
+            self.cross_ref_history.append((current_verse, current_refs, verse_list_state))
+            self.debug_print(f"📚 Saved to history: {current_verse} ({len(current_refs)} refs, {len(verse_list_state)} verses)")
+        except Exception as e:
+            self.debug_print(f"⚠️  Error saving Window 3 state to history: {e}")
+            # Still add to history with empty verse list if there's an error
+            self.cross_ref_history.append((current_verse, current_refs, []))
+            self.debug_print(f"📚 Saved to history (without verse list): {current_verse} ({len(current_refs)} refs)")
+
     def update_cross_references_dropdown(self, verse_reference):
         """
         Update the cross-references dropdown with references for the selected verse.
+        Note: History saving is now done in save_window3_to_history_before_update()
+        which is called BEFORE Window 3 is cleared.
 
         Args:
             verse_reference (str): Verse reference (e.g., "Genesis 1:1")
         """
-        # Save current state to history before updating (if there are references)
-        if self.cross_references_combo.isEnabled() and self.cross_references_combo.count() > 1:
-            # Get current verse reference from the first item's data
-            current_verse = getattr(self, '_current_cross_ref_verse', None)
-            if current_verse and current_verse != verse_reference:
-                # Save the current state
-                current_refs = []
-                for i in range(1, self.cross_references_combo.count()):
-                    ref = self.cross_references_combo.itemData(i)
-                    text = self.cross_references_combo.itemText(i)
-                    if ref:
-                        current_refs.append((ref, text))
-
-                # Add to history stack
-                self.cross_ref_history.append((current_verse, current_refs))
-                self.debug_print(f"📚 Saved to history: {current_verse} ({len(current_refs)} refs)")
-
         # Store the new verse reference
         self._current_cross_ref_verse = verse_reference
 
@@ -5199,20 +5356,72 @@ PRESS, L.L.C. ALL RIGHTS RESERVED.""")
             self.debug_print(f"⚪ No cross-references found for {verse_reference}")
 
     def on_go_back_references(self):
-        """Restore the previous cross-reference list from history."""
+        """Restore the previous cross-reference list and Window 3 verse list from history."""
         if len(self.cross_ref_history) == 0:
             self.debug_print("⚠️  No history to go back to")
             return
 
         # Pop the last state from history
-        verse_reference, references_list = self.cross_ref_history.pop()
+        verse_reference, references_list, verse_list_state = self.cross_ref_history.pop()
 
-        self.debug_print(f"⬅️  Going back to: {verse_reference} ({len(references_list)} refs)")
+        self.debug_print(f"⬅️  Going back to: {verse_reference} ({len(references_list)} refs, {len(verse_list_state)} verses)")
+
+        # Restore Window 3 verse list
+        from PyQt6.QtGui import QFont, QColor, QBrush
+
+        # Clear reading window
+        self.verse_lists['reading'].clear_verses()
+
+        # Get verse font size
+        verse_size = self.verse_font_sizes[self.verse_font_size]
+
+        # Restore verses
+        for verse_data in verse_list_state:
+            self.verse_lists['reading'].add_verse(
+                verse_data['verse_id'],
+                verse_data['translation'],
+                verse_data['book_abbrev'],
+                verse_data['chapter'],
+                verse_data['verse_number'],
+                verse_data['text']
+            )
+
+            # Apply font
+            verse_id = verse_data['verse_id']
+            if verse_id in self.verse_lists['reading'].verse_items:
+                list_item, verse_widget = self.verse_lists['reading'].verse_items[verse_id]
+                verse_font = QFont("IBM Plex Mono")
+                verse_font.setBold(False)
+                verse_font.setPointSizeF(verse_size)
+                verse_widget.text_label.setFont(verse_font)
+
+                # Restore highlighting
+                if verse_data.get('is_highlighted', False):
+                    verse_widget.set_highlighted(True)
+                    list_item.setBackground(QBrush(QColor(214, 233, 255)))  # #D6E9FF blue tint
+                else:
+                    verse_widget.set_highlighted(False)
+                    list_item.setBackground(QBrush(QColor(255, 255, 255)))  # White
+
+        # Update size hints after font changes
+        self.verse_lists['reading'].update_item_sizes()
+
+        # Update translation label in Reading Window header
+        if verse_list_state and hasattr(self, 'reading_section') and hasattr(self.reading_section, 'translation_label') and self.reading_section.translation_label:
+            translation_abbrev = verse_list_state[0]['translation']
+            translation_name = translation_abbrev  # Default to abbreviation
+            for trans in self.search_controller.bible_search.translations:
+                if trans.abbreviation == translation_abbrev:
+                    translation_name = trans.full_name
+                    break
+            self.reading_section.translation_label.setText(translation_name)
+
+        self.debug_print(f"✓ Restored {len(verse_list_state)} verses to Window 3")
 
         # Update the current verse reference
         self._current_cross_ref_verse = verse_reference
 
-        # Clear and rebuild the dropdown
+        # Clear and rebuild the references dropdown
         self.cross_references_combo.clear()
         self.cross_references_combo.addItem(f"References ({len(references_list)})")
 
@@ -5265,7 +5474,7 @@ PRESS, L.L.C. ALL RIGHTS RESERVED.""")
         if len(self.cross_ref_history) == 0:
             self.go_back_btn.setVisible(False)
 
-        self.debug_print(f"✅ Restored references for {verse_reference}")
+        self.debug_print(f"✅ Restored references and verses for {verse_reference}")
 
     def on_cross_reference_selected(self, index):
         """

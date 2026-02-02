@@ -52,11 +52,11 @@ class VerseItemWidget(QWidget):
     selection_changed = pyqtSignal(str, bool)  # verse_id, is_selected
     verse_clicked = pyqtSignal(str)  # verse_id for navigation
     
-    def __init__(self, verse_id, translation, book_abbrev, chapter, verse_number, 
-                 text, window_id=None, parent=None):
+    def __init__(self, verse_id, translation, book_abbrev, chapter, verse_number,
+                 text, window_id=None, highlight_terms=None, parent=None):
         """
         Initialize a verse display widget.
-        
+
         Args:
             verse_id (str): Unique identifier for this verse
             translation (str): Bible translation abbreviation (e.g., "KJV")
@@ -65,6 +65,7 @@ class VerseItemWidget(QWidget):
             verse_number (int): Verse number within the chapter
             text (str): Full verse text to display
             window_id (str, optional): ID of the parent window (e.g., "search", "reading")
+            highlight_terms (list, optional): List of terms to highlight in the verse text
             parent (QWidget, optional): Parent widget
         """
         super().__init__(parent)
@@ -75,6 +76,7 @@ class VerseItemWidget(QWidget):
         self.verse_number = verse_number
         self.text = text
         self.window_id = window_id  # Store which window this verse belongs to
+        self.highlight_terms = highlight_terms or []  # Terms to highlight
         self.is_highlighted = False  # Track if this verse is highlighted for navigation
 
         self.setup_ui()
@@ -125,9 +127,23 @@ class VerseItemWidget(QWidget):
         ref_width = font_metrics.horizontalAdvance(ref_text + " - ")
         self.ref_width = ref_width  # Store for later updates
 
-        # Simple plain text display without hanging indent
-        combined_text = f"{ref_text} - {self.text}"
-        self.text_label = QLabel(combined_text)
+        # Apply highlighting if terms are provided
+        verse_text = self.text
+        if self.highlight_terms:
+            verse_text = self.apply_highlighting(verse_text)
+            # Use HTML formatting - escape the reference too
+            import html
+            ref_text_escaped = html.escape(ref_text)
+            combined_text = f"<span style='color: #333;'>{ref_text_escaped} - </span>{verse_text}"
+            self.text_label = QLabel(combined_text)
+            self.text_label.setTextFormat(Qt.TextFormat.RichText)
+            # Ensure text interaction is disabled so mouse events pass through to widget
+            self.text_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        else:
+            # Simple plain text display without highlighting
+            combined_text = f"{ref_text} - {verse_text}"
+            self.text_label = QLabel(combined_text)
+
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.text_label, stretch=1)
@@ -141,6 +157,47 @@ class VerseItemWidget(QWidget):
 
         # Set height for proper scrolling - minimal
         self.setMinimumHeight(18)  # Minimal height
+
+    def apply_highlighting(self, text):
+        """
+        Apply HTML highlighting to search terms in verse text.
+        Supports both individual words and multi-word phrases.
+        Also supports two-color highlighting for wildcard variations.
+
+        Args:
+            text (str): The verse text to highlight (may contain bracket notation)
+
+        Returns:
+            str: HTML-formatted text with highlighted search terms
+        """
+        import re
+        import html
+
+        # Escape HTML characters first
+        text = html.escape(text)
+
+        # Convert bracket notation to HTML highlighting
+        # [word] = green (base match)
+        # ]{variation} = blue (wildcard variation)
+        # Pattern: [base]{variation} or just [word]
+
+        # Replace [base]{variation} with two-color HTML
+        text = re.sub(
+            r'\[([^\]]+)\]\{([^\}]+)\}',
+            r'<span style="background-color: #90EE90; color: #006400; font-weight: bold;">\1</span><span style="background-color: #ADD8E6; color: #00008B; font-weight: bold;">\2</span>',
+            text
+        )
+
+        # Replace remaining [word] with single-color HTML (green)
+        text = re.sub(
+            r'\[([^\]]+)\]',
+            r'<span style="background-color: #90EE90; color: #006400; font-weight: bold;">\1</span>',
+            text
+        )
+
+        # Bracket notation from bible_search.py handles all highlighting
+        # No additional pattern-based highlighting needed
+        return text
 
     def setup_styling(self):
         """
@@ -189,10 +246,12 @@ class VerseItemWidget(QWidget):
         font.setPointSizeF(font_size)
         self.text_label.setFont(font)
 
-        # Recalculate hanging indent for the current font size
-        # Update text with plain text (no HTML)
-        combined_text = f"{self.reference_text} - {self.text}"
-        self.text_label.setText(combined_text)
+        # Only update text if NOT using highlighting (to preserve HTML)
+        if not self.highlight_terms:
+            # Recalculate hanging indent for the current font size
+            # Update text with plain text (no HTML)
+            combined_text = f"{self.reference_text} - {self.text}"
+            self.text_label.setText(combined_text)
 
         # Remove line-height to prevent blank lines after multi-line verses
         self.text_label.setStyleSheet("""
@@ -555,7 +614,7 @@ class VerseListWidget(QWidget):
             }
         """)
 
-    def add_verse(self, verse_id, translation, book_abbrev, chapter, verse_number, text):
+    def add_verse(self, verse_id, translation, book_abbrev, chapter, verse_number, text, highlight_terms=None):
         """
         Add a verse to the list.
 
@@ -566,6 +625,7 @@ class VerseListWidget(QWidget):
             chapter (int): Chapter number
             verse_number (int): Verse number
             text (str): Full verse text
+            highlight_terms (list, optional): List of terms to highlight in the verse text
 
         Note:
             If verse_id already exists, the verse is not added again
@@ -580,7 +640,8 @@ class VerseListWidget(QWidget):
         # Create VerseItemWidget
         verse_widget = VerseItemWidget(
             verse_id, translation, book_abbrev, chapter,
-            verse_number, text, window_id=self.window_id, parent=None
+            verse_number, text, window_id=self.window_id,
+            highlight_terms=highlight_terms, parent=None
         )
         verse_widget.selection_changed.connect(self.on_verse_selection_changed)
         verse_widget.verse_clicked.connect(self.on_verse_clicked)
@@ -627,12 +688,15 @@ class VerseListWidget(QWidget):
             self.main_window.update_acquire_button_state()
 
             # Lock/unlock selection mode based on whether ANY boxes are checked
-            if len(self.selected_verses) > 0:
-                # Lock mode (manual selection, not Ctrl+A)
-                self.main_window.lock_selection_mode(is_ctrl_a=False)
-            else:
-                # All unchecked - unlock
-                self.main_window.unlock_selection_mode()
+            # BUT: Don't lock for Window 4 (subject) - those verses are already in the database
+            # and can only be deleted/cut, not acquired
+            if self.window_id != 'subject':
+                if len(self.selected_verses) > 0:
+                    # Lock mode (manual selection, not Ctrl+A)
+                    self.main_window.lock_selection_mode(is_ctrl_a=False)
+                else:
+                    # All unchecked - unlock
+                    self.main_window.unlock_selection_mode()
 
     def on_verse_clicked(self, verse_id):
         """
@@ -964,7 +1028,8 @@ class SectionWidget(QFrame):
     """
 
     def __init__(self, title, content_widget, controls_widget=None,
-                 show_settings=False, title_buttons=None, main_window=None, parent=None):
+                 show_settings=False, title_buttons=None, main_window=None,
+                 show_translation=False, parent=None):
         """
         Initialize a section container.
 
@@ -975,6 +1040,7 @@ class SectionWidget(QFrame):
             show_settings (bool): If True, displays a settings gear icon
             title_buttons (list, optional): List of QPushButton widgets to add to title bar
             main_window (QMainWindow, optional): Reference to main window for settings callback
+            show_translation (bool): If True, shows translation name in title row (for Reading Window)
             parent (QWidget, optional): Parent widget
         """
         super().__init__(parent)
@@ -993,6 +1059,7 @@ class SectionWidget(QFrame):
         # Store references for title click handling
         self.content_widget = content_widget
         self.main_window = main_window
+        self.translation_label = None  # Will be created if show_translation is True
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(3, 0, 3, 3)  # Reduced top margin from 3 to 0
@@ -1029,6 +1096,22 @@ class SectionWidget(QFrame):
             print(f"⚠️  Title '{title}' not clickable: window_id={hasattr(content_widget, 'window_id')}, main_window={main_window is not None}")
 
         title_layout.addWidget(title_label)
+
+        # Add translation label if requested (for Reading Window)
+        if show_translation:
+            self.translation_label = QLabel("")
+            self.translation_label.setStyleSheet("""
+                QLabel {
+                    font-weight: bold;
+                    font-size: 11px;
+                    color: #333;
+                    background-color: transparent;
+                    padding: 0px;
+                    margin-left: 20px;
+                }
+            """)
+            title_layout.addWidget(self.translation_label)
+
         title_layout.addStretch()
 
         # Add custom title buttons if provided
